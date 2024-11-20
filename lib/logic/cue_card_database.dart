@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/cue_card.dart';
 import '../enums/card_type.dart';
@@ -22,7 +23,7 @@ class CueCardDatabase {
   }
 
   Future<Database> _initDatabase() async {
-    final dbPath = await getDatabasesPath();
+    final dbPath = (await getApplicationDocumentsDirectory()).path;
     final path = join(dbPath, 'dnd_cuecards.db');
 
     return await openDatabase(
@@ -41,15 +42,15 @@ class CueCardDatabase {
     return db.execute('''
       CREATE TABLE cue_cards (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        requirements TEXT NOT NULL,
-        description TEXT NOT NULL,
-        box1 TEXT NOT NULL,
-        box2 TEXT NOT NULL,
+        title TEXT,
+        requirements TEXT,
+        description TEXT,
+        box1 TEXT,
+        box2 TEXT,
         notes TEXT,
         created_at TEXT,
-        type TEXT NOT NULL,
-        rarity TEXT NOT NULL,
+        type TEXT,
+        rarity TEXT,
         icon TEXT
       );
 

@@ -61,7 +61,7 @@ class _MyHomePageState extends State<MyHomePage> {
     Widget page;
     switch (selectedIndex) {
       case 0:
-        page = CueCardCreator();
+        page = CueCardCreatorView();
       case 1:
         page = FavoritesPage();
       default:

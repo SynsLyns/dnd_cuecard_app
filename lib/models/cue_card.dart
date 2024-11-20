@@ -3,25 +3,25 @@ import '../enums/rarity.dart';
 
 class CueCard {
   final int? id;
-  final String title;
-  final String requirements;
-  final String description;
-  final String box1;
-  final String box2;
+  final String? title;
+  final String? requirements;
+  final String? description;
+  final String? box1;
+  final String? box2;
   final String? notes;
   final List<String> tags;
   final DateTime? dateCreated;
-  final CardType type;
-  final Rarity rarity;
+  final CardType? type;
+  final Rarity? rarity;
   final String? iconFilePath;
 
   CueCard({
     this.id,
-    required this.title,
-    required this.requirements,
-    required this.description,
-    required this.box1,
-    required this.box2,
+    this.title,
+    this.requirements,
+    this.description,
+    this.box1,
+    this.box2,
     this.notes,
     this.tags = const [],
     this.dateCreated,
@@ -39,8 +39,8 @@ class CueCard {
       'box2': box2,
       'notes': notes,
       'dateCreated': dateCreated?.toIso8601String(),
-      'type': type.name,
-      'rarity': rarity.name,
+      'type': type?.name,
+      'rarity': rarity?.name,
       'icon': iconFilePath,
     };
   }
