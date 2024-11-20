@@ -1,0 +1,1 @@
+enum CardType { item, armor, spell, weapon, skill }
