@@ -13,6 +13,7 @@ class CueCardView extends StatefulWidget {
     required this.notesController,
     required this.box1Controller,
     required this.box2Controller,
+    required this.onImageChanged,
   });
 
   final TextEditingController titleController;
@@ -21,6 +22,7 @@ class CueCardView extends StatefulWidget {
   final TextEditingController notesController;
   final TextEditingController box1Controller;
   final TextEditingController box2Controller;
+  final void Function(String? imagePath) onImageChanged;
 
   @override
   State<CueCardView> createState() => _CueCardViewState();
@@ -91,9 +93,7 @@ class _CueCardViewState extends State<CueCardView> {
     setState(() {
       this.image = image;
     });
-    if (image != null) {
-      print('Selected image path: ${image.path}');
-    }
+    widget.onImageChanged(image?.path);
   }
 
   Widget _buildDescriptionSection() {

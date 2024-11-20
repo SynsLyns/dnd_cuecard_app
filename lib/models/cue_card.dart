@@ -38,7 +38,7 @@ class CueCard {
       'box1': box1,
       'box2': box2,
       'notes': notes,
-      'dateCreated': dateCreated?.toIso8601String(),
+      'date_created': dateCreated?.toIso8601String(),
       'type': type?.name,
       'rarity': rarity?.name,
       'icon': iconFilePath,

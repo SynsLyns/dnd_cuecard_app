@@ -1,4 +1,4 @@
-package com.example.dnd_cuecard_app
+package dnd_cuecard_app
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -12,8 +12,11 @@ class CueCardCreator {
 
   static Future<void> createCueCard(String title, String requirements, String description, String box1, String box2, String notes, List<String> tags, String type, String rarity, String? iconFilePath) async {
     
+    print('Application Support Directory: ${await getApplicationSupportDirectory()}');
+    print('Application Documents Directory: ${await getApplicationDocumentsDirectory()}');
+    print('Application Cache Directory: ${await getApplicationCacheDirectory()}');
     if (iconFilePath != null) {
-      Directory appDocDirectory = await getApplicationDocumentsDirectory();
+      Directory appDocDirectory = await getApplicationSupportDirectory();
       String appPath = appDocDirectory.path;
       
       String targetFolder = '$appPath/images';

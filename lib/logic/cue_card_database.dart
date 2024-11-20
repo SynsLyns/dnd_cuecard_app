@@ -1,7 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../models/cue_card.dart';
 import '../enums/card_type.dart';
 import '../enums/rarity.dart';
@@ -23,7 +24,12 @@ class CueCardDatabase {
   }
 
   Future<Database> _initDatabase() async {
-    final dbPath = (await getApplicationDocumentsDirectory()).path;
+    if (Platform.isWindows || Platform.isLinux) {
+      sqfliteFfiInit();
+    }
+
+    databaseFactory = databaseFactoryFfi;
+    final dbPath = (await getApplicationSupportDirectory()).path;
     final path = join(dbPath, 'dnd_cuecards.db');
 
     return await openDatabase(
@@ -48,7 +54,7 @@ class CueCardDatabase {
         box1 TEXT,
         box2 TEXT,
         notes TEXT,
-        created_at TEXT,
+        date_created TEXT,
         type TEXT,
         rarity TEXT,
         icon TEXT

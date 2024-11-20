@@ -21,6 +21,7 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
   final box2Controller = TextEditingController();
   final cardTypeController = TextEditingController();
   final rarityController = TextEditingController();
+  String? imagePath;
 
   @override
   void dispose() {
@@ -46,7 +47,7 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
         [],
         cardTypeController.text,
         rarityController.text,
-        null
+        imagePath
     );
   }
 
@@ -81,6 +82,7 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
             notesController: notesController,
             box1Controller: box1Controller,
             box2Controller: box2Controller,
+            onImageChanged: (imagePath) => setState(() => this.imagePath = imagePath),
           ),
         );
       },
