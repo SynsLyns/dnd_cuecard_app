@@ -1,37 +1,27 @@
 import 'dart:io';
 
+import 'package:dnd_cuecard_app/screens/cue_card_form_controllers.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+
 import 'cue_card_section.dart';
 
 class CueCardView extends StatefulWidget {
   CueCardView({
     super.key,
-    required this.titleController,
-    required this.requirementsController,
-    required this.descriptionController,
-    required this.notesController,
-    required this.box1Controller,
-    required this.box2Controller,
-    required this.onImageChanged,
+    required this.controllers,
+    required this.image,
+    required this.onImageSelected,
   });
 
-  final TextEditingController titleController;
-  final TextEditingController requirementsController;
-  final TextEditingController descriptionController;
-  final TextEditingController notesController;
-  final TextEditingController box1Controller;
-  final TextEditingController box2Controller;
-  final void Function(String? imagePath) onImageChanged;
-
+  final CueCardFormControllers controllers;
+  final XFile? image;
+  final void Function(XFile?) onImageSelected;
   @override
   State<CueCardView> createState() => _CueCardViewState();
 }
 
 class _CueCardViewState extends State<CueCardView> {
-
-  XFile? image;
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -51,11 +41,11 @@ class _CueCardViewState extends State<CueCardView> {
           children: [
             _buildImageSection(),
             CueCardSection(
-                sectionName: 'Title', flex: 6, controller: widget.titleController),
+                sectionName: 'Title', flex: 6, controller: widget.controllers.titleController),
             CueCardSection(
                 sectionName: 'Requirements',
                 flex: 1,
-                controller: widget.requirementsController),
+                controller: widget.controllers.requirementsController),
           ],
         ),
       ),
@@ -70,8 +60,8 @@ class _CueCardViewState extends State<CueCardView> {
         decoration: BoxDecoration(
           border: Border.all(color: Colors.black),
           color: const Color.fromARGB(255, 255, 255, 255),
-          image: image != null ? DecorationImage(
-            image: FileImage(File(image!.path)) as ImageProvider<Object>,
+          image: widget.image != null ? DecorationImage(
+            image: FileImage(File(widget.image!.path)) as ImageProvider<Object>,
           ) : null,
         ),
         child: IconButton(
@@ -90,17 +80,14 @@ class _CueCardViewState extends State<CueCardView> {
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery);
-    setState(() {
-      this.image = image;
-    });
-    widget.onImageChanged(image?.path);
+    widget.onImageSelected(image);
   }
 
   Widget _buildDescriptionSection() {
     return CueCardSection(
         sectionName: 'Description',
         flex: 3,
-        controller: widget.descriptionController);
+        controller: widget.controllers.descriptionController);
   }
 
   Widget _buildBottomRow() {
@@ -109,7 +96,7 @@ class _CueCardViewState extends State<CueCardView> {
       child: Row(
         children: [
           CueCardSection(
-              sectionName: 'Notes', flex: 7, controller: widget.notesController),
+              sectionName: 'Notes', flex: 7, controller: widget.controllers.notesController),
           _buildBoxesColumn(),
         ],
       ),
@@ -124,11 +111,11 @@ class _CueCardViewState extends State<CueCardView> {
           CueCardSection(
               sectionName: 'Box 1',
               flex: 1,
-              controller: widget.box1Controller),
+              controller: widget.controllers.box1Controller),
           CueCardSection(
               sectionName: 'Box 2',
               flex: 1,
-              controller: widget.box2Controller),
+              controller: widget.controllers.box2Controller),
         ],
       ),
     );

@@ -1,1 +1,0 @@
-enum Rarity { common, uncommon, rare, veryRare, epic, legendary }

@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:io';
+
+import 'package:flutter/painting.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import '../models/card_type.dart';
 import '../models/cue_card.dart';
-import '../enums/card_type.dart';
-import '../enums/rarity.dart';
+import '../models/rarity.dart';
 
 class CueCardDatabase {
   static final CueCardDatabase _instance = CueCardDatabase._internal();
@@ -55,8 +58,8 @@ class CueCardDatabase {
         box2 TEXT,
         notes TEXT,
         date_created TEXT,
-        type TEXT,
-        rarity TEXT,
+        type INTEGER,
+        rarity INTEGER,
         icon TEXT
       );
 
@@ -72,6 +75,18 @@ class CueCardDatabase {
         FOREIGN KEY (cue_card_id) REFERENCES cue_cards(id) ON DELETE CASCADE,
         FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
       );
+
+      CREATE TABLE rarities (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        color INTEGER NOT NULL
+      );
+
+      CREATE TABLE card_types (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        color INTEGER NOT NULL
+      );
     ''');
   }
 
@@ -85,36 +100,42 @@ class CueCardDatabase {
     return id;
   }
 
+  Future<CueCard> getCueCard(int id) async {
+    final db = await database;
+    final List<Map<String, Object?>> cueCard = await db.query('cue_cards', where: 'id = ?', whereArgs: [id]);
+    return CueCard.fromMap(cueCard[0]);
+  }
+
   Future<List<CueCard>> getAllCueCards() async {
     final db = await database;
     final List<Map<String, Object?>> cueCards = await db.query('cue_cards');
     return [
       for (final {
-        'id' : id as int,
-        'title' : title as String,
-        'requirements' : requirements as String,
-        'description' : description as String,
-        'box1' : box1 as String,
-        'box2' : box2 as String,
-        'notes' : notes as String,
-        'tags' : tags as List<String>,
-        'dateCreated' : dateCreated as DateTime?,
-        'type' : type as String,
-        'rarity' : rarity as String,
+        'id' : id as int?,
+        'title' : title as String?,
+        'requirements' : requirements as String?,
+        'description' : description as String?,
+        'box1' : box1 as String?,
+        'box2' : box2 as String?,
+        'notes' : notes as String?,
+        'type' : type as int?,
+        'rarity' : rarity as int?,
         'icon' : icon as String?,
       } in cueCards)
-      CueCard(id: id, title: title, requirements: requirements, description: description, box1: box1, box2: box2, notes: notes, tags: tags, dateCreated: dateCreated, type: CardType.values.byName(type), rarity: Rarity.values.byName(rarity), iconFilePath: icon),
+      CueCard(id: id, title: title, requirements: requirements, description: description, box1: box1, box2: box2, notes: notes, tags: [], dateCreated: null, type: type, rarity: rarity, iconFilePath: icon),
     ];
   }
 
   Future<int> updateCueCard(CueCard cueCard) async {
     final db = await database;
-    return await db.update(
+    int result = await db.update(
       'cue_cards',
       cueCard.toMapForInsert(),
       where: 'id = ?',
       whereArgs: [cueCard.id],
     );
+    print('Updated cue card with id: ${cueCard.id}');
+    return result;
   }
 
   Future<int> deleteCueCard(int id) async {
@@ -124,5 +145,41 @@ class CueCardDatabase {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  Future<List<Rarity>> getRarities() async {
+    final db = await database;
+    final List<Map<String, Object?>> rarities = await db.query('rarities');
+    return [
+      for (final {
+        'id' : id as int,
+        'name' : name as String,
+        'color' : color as int,
+      } in rarities)
+      Rarity(id: id, name: name, color: Color(color)),
+    ];
+  }
+
+  Future<int> insertRarity(Rarity rarity) async {
+    final db = await database;
+    return await db.insert('rarities', rarity.toMapForInsert());
+  }
+
+  Future<List<CardType>> getCardTypes() async {
+    final db = await database;
+    final List<Map<String, Object?>> cardTypes = await db.query('card_types');
+    return [
+      for (final {
+        'id' : id as int,
+        'name' : name as String,
+        'color' : color as int,
+      } in cardTypes)
+      CardType(id: id, name: name, color: Color(color)),
+    ];
+  }
+
+  Future<int> insertCardType(CardType cardType) async {
+    final db = await database;
+    return await db.insert('card_types', cardType.toMapForInsert());
   }
 }
