@@ -7,7 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'cue_card_section.dart';
 
 class CueCardView extends StatefulWidget {
-  CueCardView({
+  const CueCardView({
     super.key,
     required this.controllers,
     required this.image,
@@ -66,7 +66,7 @@ class _CueCardViewState extends State<CueCardView> {
         ),
         child: IconButton(
           onPressed: _pickImage,
-          icon: Icon(Icons.add_a_photo, color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
+          icon: Icon(Icons.add_a_photo, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
           style: IconButton.styleFrom(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.zero,

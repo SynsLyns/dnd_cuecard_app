@@ -54,7 +54,6 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
 
   @override
   Widget build(BuildContext context) {
-    var appState = context.watch<AppState>();
     return LayoutBuilder(
       builder: (context, constraints) {
         var minConstraint = min(constraints.maxWidth, constraints.maxHeight);

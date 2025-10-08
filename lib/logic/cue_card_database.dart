@@ -5,6 +5,7 @@ import 'package:flutter/painting.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/card_type.dart';
 import '../models/cue_card.dart';
@@ -134,7 +135,7 @@ class CueCardDatabase {
       where: 'id = ?',
       whereArgs: [cueCard.id],
     );
-    print('Updated cue card with id: ${cueCard.id}');
+    debugPrint('Updated cue card with id: ${cueCard.id}');
     return result;
   }
 

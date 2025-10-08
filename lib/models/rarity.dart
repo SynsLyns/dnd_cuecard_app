@@ -16,7 +16,7 @@ class Rarity implements Nameable {
   Map<String, Object?> toMapForInsert() {
     return {
       'name': name,
-      'color': color.value,
+      'color': color.toARGB32(),
     };
   }
 }
