@@ -4,6 +4,7 @@ import 'package:dnd_cuecard_app/screens/cue_card_form_controllers.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../logic/cue_card_creator.dart';
 import 'cue_card_section.dart';
 
 class CueCardView extends StatefulWidget {
@@ -65,7 +66,7 @@ class _CueCardViewState extends State<CueCardView> {
           ) : null,
         ),
         child: IconButton(
-          onPressed: _pickImage,
+          onPressed: _showIconSelectionDialog,
           icon: Icon(Icons.add_a_photo, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
           style: IconButton.styleFrom(
             shape: RoundedRectangleBorder(
@@ -77,10 +78,76 @@ class _CueCardViewState extends State<CueCardView> {
     );
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickNewImage() async {
     final ImagePicker picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery);
     widget.onImageSelected(image);
+  }
+
+  void _selectExistingImage(String imagePath) {
+    widget.onImageSelected(XFile(imagePath));
+  }
+
+  Future<void> _showIconSelectionDialog() async {
+    List<String> existingIconPaths = await CueCardCreator.getAllIconFilePaths();
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Icon'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (existingIconPaths.isNotEmpty) _buildIconGrid(existingIconPaths),
+              if (existingIconPaths.isEmpty)
+                const Text('No existing icons. Add a new one!'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await _pickNewImage();
+                },
+                child: const Text('Add New Icon'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIconGrid(List<String> existingIconPaths) {
+    return Expanded(
+      child: GridView.builder(
+        shrinkWrap: true,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+        ),
+        itemCount: existingIconPaths.length,
+        itemBuilder: (context, index) {
+          String iconPath = existingIconPaths[index];
+          return GestureDetector(
+            onTap: () {
+              _selectExistingImage(iconPath);
+              Navigator.pop(context);
+            },
+            child: Image.file(File(iconPath), fit: BoxFit.cover),
+          );
+        },
+      ),
+    );
   }
 
   Widget _buildDescriptionSection() {

@@ -43,6 +43,7 @@ dependencies:
   characters: ^1.4.0
   material_color_utilities: ^0.11.1
   meta: ^1.16.0
+  crypto: ^3.0.3
 
 dev_dependencies:
   flutter_test:
@@ -103,7 +104,7 @@ msix_config:
   publisher_display_name: Get Balled
   identity_name: ballers.suite.dndcuecardapp
   msix_version: 0.0.1.0
-  logo_path: C:\repos\dnd_cuecard_app\windows\runner\resources\huh.png
+  logo_path: C:\Users\Bill\repos\dnd_cuecard_app\windows\runner\resources\huh.png
   capabilities: nothing
-  certificate_path: C:\repos\dnd_cuecard_app\certificates\CERTIFICATE.pfx
+  certificate_path: C:\Users\Bill\repos\dnd_cuecard_app\certificates\CERTIFICATE.pfx
   certificate_password: abc123
