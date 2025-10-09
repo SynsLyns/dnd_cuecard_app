@@ -1,10 +1,12 @@
-import 'package:dnd_cuecard_app/interfaces/nameable.dart';
+import 'package:dnd_cuecard_app/interfaces/categorizable.dart';
 import 'package:flutter/painting.dart';
 
-class Rarity implements Nameable {
+class Rarity implements Categorizable {
+  @override
   final int? id;
   @override
   final String name;
+  @override
   final Color color;
 
   const Rarity({
