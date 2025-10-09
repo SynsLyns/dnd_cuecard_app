@@ -1,8 +1,7 @@
-import 'dart:io';
-
 import 'package:dnd_cuecard_app/app_state.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:dnd_cuecard_app/widgets/cue_card_widgets/hoverable_cue_card.dart';
 
 class CueCardLibraryView extends StatefulWidget {
   const CueCardLibraryView({super.key});
@@ -26,26 +25,7 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
       itemCount: cueCards.length,
       itemBuilder: (context, index) {
         final cueCard = cueCards[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-          child: ListTile(
-            title: Text(cueCard.title ?? 'Untitled'),
-            subtitle: Text(cueCard.description ?? 'No description'),
-            leading: cueCard.iconFilePath != null 
-              ? SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: Image.file(
-                    File(cueCard.iconFilePath!),
-                    fit: BoxFit.cover,
-                  ),
-                )
-              : null,
-            onTap: () {
-              appState.selectCard(cueCard);
-            },
-          ),
-        );
+        return HoverableCueCard(cueCard: cueCard);
       },
     );
   }

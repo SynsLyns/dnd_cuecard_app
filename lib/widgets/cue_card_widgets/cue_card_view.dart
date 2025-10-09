@@ -159,7 +159,7 @@ class _CueCardViewState extends State<CueCardView> {
 
   Widget _buildBottomRow() {
     return Expanded(
-      flex: 2,
+      flex: 1,
       child: Row(
         children: [
           CueCardSection(

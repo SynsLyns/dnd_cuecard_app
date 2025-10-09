@@ -15,7 +15,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => AppState(),
+      create: (context) {
+        final appState = AppState();
+        appState.init();
+        return appState;
+      },
       child: MaterialApp(
         title: 'DnD Cue Cards',
         theme: ThemeData(

@@ -13,10 +13,14 @@ class AppState extends ChangeNotifier {
 
   CueCard? selectedCard;
 
-  AppState() {
-    loadRarities();
-    loadCardTypes();
-    loadCueCards();
+  AppState();
+
+  Future<void> init() async {
+    await Future.wait([
+      loadRarities(),
+      loadCardTypes(),
+      loadCueCards(),
+    ]);
   }
 
   Future<void> loadRarities() async {
@@ -36,6 +40,12 @@ class AppState extends ChangeNotifier {
 
   void selectCard(CueCard? card) {
     selectedCard = card;
+    notifyListeners();
+  }
+
+  Future<void> removeCueCard(int id) async {
+    await _cueCardDatabase.deleteCueCard(id);
+    cueCards.removeWhere((card) => card.id == id);
     notifyListeners();
   }
 }
