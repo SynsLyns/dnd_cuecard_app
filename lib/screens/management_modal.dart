@@ -1,0 +1,137 @@
+import 'package:dnd_cuecard_app/widgets/manage_category_dialog.dart';
+import 'package:dnd_cuecard_app/interfaces/categorizable.dart';
+import 'package:flutter/material.dart';
+import 'package:dnd_cuecard_app/widgets/category_management_tab.dart';
+import 'package:provider/provider.dart';
+
+import '../logic/cue_card_creator.dart';
+import '../app_state.dart';
+import 'package:dnd_cuecard_app/models/card_type.dart';
+import 'package:dnd_cuecard_app/models/rarity.dart';
+
+class ManagementModal extends StatefulWidget {
+  final Function() refreshCardTypes;
+  final Function() refreshRarities;
+
+  const ManagementModal({
+    super.key,
+    required this.refreshCardTypes,
+    required this.refreshRarities,
+  });
+
+  @override
+  State<ManagementModal> createState() => _ManagementModalState();
+}
+
+class _ManagementModalState extends State<ManagementModal> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Manage Categories'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TabBar(
+              controller: _tabController,
+              tabs: const [
+                Tab(text: 'Card Types'),
+                Tab(text: 'Rarities'),
+              ],
+            ),
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.4,
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildCategoryManagementTab<CardType>(
+                    categoryLabel: 'Card Type',
+                    values: context.watch<AppState>().cardTypes,
+                    createFunction: CueCardCreator.createCardType,
+                    updateFunction: CueCardCreator.updateCardType,
+                    deleteFunction: CueCardCreator.deleteCardType,
+                    refreshFunction: widget.refreshCardTypes,
+                  ),
+                  _buildCategoryManagementTab<Rarity>(
+                    categoryLabel: 'Rarity',
+                    values: context.watch<AppState>().rarities,
+                    createFunction: CueCardCreator.createRarity,
+                    updateFunction: CueCardCreator.updateRarity,
+                    deleteFunction: CueCardCreator.deleteRarity,
+                    refreshFunction: widget.refreshRarities,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryManagementTab<T extends Categorizable>({
+    required String categoryLabel,
+    required List<T> values,
+    required Future<bool> Function(String, Color) createFunction,
+    required Future<bool> Function(int, String, Color) updateFunction,
+    required Function(int) deleteFunction,
+    required Function() refreshFunction,
+  }) {
+    return CategoryManagementTab<T>(
+      categoryLabel: categoryLabel,
+      values: values,
+      createFunction: createFunction,
+      updateFunction: updateFunction,
+      deleteFunction: deleteFunction,
+      refreshFunction: refreshFunction,
+      showCreateEditDialog: _showCreateEditDialog,
+    );
+  }
+
+  void _showCreateEditDialog<T extends Categorizable>({
+    required BuildContext context,
+    required String label,
+    required Future<bool> Function(String, Color) createFunction,
+    required Future<bool> Function(int, String, Color) updateFunction,
+    required Function(int) deleteFunction,
+    required Function() refreshFunction,
+    T? item,
+  }) {
+
+    showDialog(
+      context: context,
+      builder: (context) => ManageCategoryDialog<T>(
+        item: item,
+        label: label,
+        createFunction: createFunction,
+        updateFunction: updateFunction,
+        deleteFunction: deleteFunction,
+        refreshFunction: refreshFunction,
+      ),
+    );
+  }
+}
+
+
+
