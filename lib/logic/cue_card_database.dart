@@ -166,6 +166,25 @@ class CueCardDatabase {
     return await db.insert('rarities', rarity.toMapForInsert());
   }
 
+  Future<int> updateRarity(Rarity rarity) async {
+    final db = await database;
+    return await db.update(
+      'rarities',
+      rarity.toMapForInsert(),
+      where: 'id = ?',
+      whereArgs: [rarity.id],
+    );
+  }
+
+  Future<int> deleteRarity(int id) async {
+    final db = await database;
+    return await db.delete(
+      'rarities',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   Future<List<CardType>> getCardTypes() async {
     final db = await database;
     final List<Map<String, Object?>> cardTypes = await db.query('card_types');
@@ -182,5 +201,46 @@ class CueCardDatabase {
   Future<int> insertCardType(CardType cardType) async {
     final db = await database;
     return await db.insert('card_types', cardType.toMapForInsert());
+  }
+
+  Future<int> updateCardType(CardType cardType) async {
+    final db = await database;
+    return await db.update(
+      'card_types',
+      cardType.toMapForInsert(),
+      where: 'id = ?',
+      whereArgs: [cardType.id],
+    );
+  }
+
+  Future<int> deleteCardType(int id) async {
+    final db = await database;
+    return await db.delete(
+      'card_types',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<bool> rarityNameExists(String name, [int? id]) async {
+    final db = await database;
+    List<Map<String, Object?>> result;
+    if (id == null) {
+      result = await db.query('rarities', where: 'name = ?', whereArgs: [name]);
+    } else {
+      result = await db.query('rarities', where: 'name = ? AND id != ?', whereArgs: [name, id]);
+    }
+    return result.isNotEmpty;
+  }
+
+  Future<bool> cardTypeNameExists(String name, [int? id]) async {
+    final db = await database;
+    List<Map<String, Object?>> result;
+    if (id == null) {
+      result = await db.query('card_types', where: 'name = ?', whereArgs: [name]);
+    } else {
+      result = await db.query('card_types', where: 'name = ? AND id != ?', whereArgs: [name, id]);
+    }
+    return result.isNotEmpty;
   }
 }

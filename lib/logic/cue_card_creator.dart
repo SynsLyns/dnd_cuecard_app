@@ -52,12 +52,44 @@ class CueCardCreator {
     await _cueCardDatabase.updateCueCard(cueCard);
   }
 
-  static Future<void> createCardType(String name, Color color) async {
+  static Future<bool> createCardType(String name, Color color) async {
+    if (await _cueCardDatabase.cardTypeNameExists(name)) {
+      return false;
+    }
     await _cueCardDatabase.insertCardType(CardType(name: name, color: color));
+    return true;
   }
 
-  static Future<void> createRarity(String name, Color color) async {
+  static Future<bool> updateCardType(int id, String name, Color color) async {
+    if (await _cueCardDatabase.cardTypeNameExists(name, id)) {
+      return false;
+    }
+    await _cueCardDatabase.updateCardType(CardType(id: id, name: name, color: color));
+    return true;
+  }
+
+  static Future<void> deleteCardType(int id) async {
+    await _cueCardDatabase.deleteCardType(id);
+  }
+
+  static Future<bool> createRarity(String name, Color color) async {
+    if (await _cueCardDatabase.rarityNameExists(name)) {
+      return false;
+    }
     await _cueCardDatabase.insertRarity(Rarity(name: name, color: color));
+    return true;
+  }
+
+  static Future<bool> updateRarity(int id, String name, Color color) async {
+    if (await _cueCardDatabase.rarityNameExists(name, id)) {
+      return false;
+    }
+    await _cueCardDatabase.updateRarity(Rarity(id: id, name: name, color: color));
+    return true;
+  }
+
+  static Future<void> deleteRarity(int id) async {
+    await _cueCardDatabase.deleteRarity(id);
   }
 
   static Future<String?> getIconFilePath(String? iconFilePath) async {
