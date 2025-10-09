@@ -103,7 +103,7 @@ msix_config:
   display_name: DnD Cue Card App
   publisher_display_name: Get Balled
   identity_name: ballers.suite.dndcuecardapp
-  msix_version: 0.0.1.0
+  msix_version: 0.0.1.1
   logo_path: C:\Users\Bill\repos\dnd_cuecard_app\windows\runner\resources\huh.png
   capabilities: nothing
   certificate_path: C:\Users\Bill\repos\dnd_cuecard_app\certificates\CERTIFICATE.pfx

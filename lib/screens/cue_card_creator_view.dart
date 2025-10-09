@@ -85,7 +85,7 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
                         clearCueCard();
                         context.read<AppState>().selectCard(null);
                       },
-                      child: const Text('Clear'),
+                      child: const Text('New Card'),
                     ),
                   ],
                 ),
