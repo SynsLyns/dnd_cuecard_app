@@ -45,9 +45,11 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
             : null;
         _currentSelectedCardType = appState.cardTypes.firstWhere(
           (element) => element.id == cueCard.type,
+          orElse: () => CardType(id: -1, name: 'Unknown', color: Colors.white),
         );
         _currentSelectedRarity = appState.rarities.firstWhere(
           (element) => element.id == cueCard.rarity,
+          orElse: () => Rarity(id: -1, name: 'Unknown', color: Colors.white),
         );
       });
     }
@@ -55,6 +57,10 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
 
   void clearCueCard() {
     _controllers.clearCueCard(context.read<AppState>());
+    clearState();
+  }
+
+  void clearState() {
     setState(() {
       image = null;
       _currentSelectedCardType = null;
@@ -64,6 +70,34 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
 
   @override
   Widget build(BuildContext context) {
+    CardOptions options = CardOptions(
+      controllers: _controllers,
+      currentSelectedCardType: _currentSelectedCardType,
+      currentSelectedRarity: _currentSelectedRarity,
+      onCardTypeChanged: (value) {
+        setState(() {
+          _currentSelectedCardType = value;
+        });
+      },
+      onRarityChanged: (value) {
+        setState(() {
+          _currentSelectedRarity = value;
+        });
+      },
+    );
+
+    void handleSave() async {
+      if (_formKey.currentState!.validate()) {
+        await _controllers.saveCueCard(context.read<AppState>(), image);
+        clearState();
+      }
+    }
+
+    void handleNewCard() {
+      clearCueCard();
+      context.read<AppState>().selectCard(null);
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         var minConstraint = min(constraints.maxWidth, constraints.maxHeight);
@@ -75,43 +109,18 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
               children: [
                 _buildCueCardView(minConstraint: minConstraint * 0.7),
                 SizedBox(height: minConstraint * 0.02),
-                CardOptions(
-                  controllers: _controllers,
-                  currentSelectedCardType: _currentSelectedCardType,
-                  currentSelectedRarity: _currentSelectedRarity,
-                  onCardTypeChanged: (value) {
-                    setState(() {
-                      _currentSelectedCardType = value;
-                    });
-                  },
-                  onRarityChanged: (value) {
-                    setState(() {
-                      _currentSelectedRarity = value;
-                    });
-                  },
-                ),
+                options,
                 SizedBox(height: minConstraint * 0.02),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     ElevatedButton(
-                      onPressed: () async {
-                        await _controllers.saveCueCard(
-                          context.read<AppState>(),
-                          image,
-                        );
-                        setState(() {
-                          image = null;
-                        });
-                      },
+                      onPressed: handleSave,
                       child: const Text('Save'),
                     ),
-                    const SizedBox(width: 16), // Add spacing between buttons
+                    const SizedBox(width: 16),
                     ElevatedButton(
-                      onPressed: () {
-                        clearCueCard();
-                        context.read<AppState>().selectCard(null);
-                      },
+                      onPressed: handleNewCard,
                       child: const Text('New Card'),
                     ),
                   ],
