@@ -59,21 +59,23 @@ class _ManagementModalState extends State<ManagementModal> with SingleTickerProv
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildCategoryManagementTab<CardType>(
+                  CategoryManagementTab<CardType>(
                     categoryLabel: 'Card Type',
                     values: context.watch<AppState>().cardTypes,
                     createFunction: CueCardCreator.createCardType,
                     updateFunction: CueCardCreator.updateCardType,
                     deleteFunction: CueCardCreator.deleteCardType,
                     refreshFunction: widget.refreshCardTypes,
+                    showCreateEditDialog: _showCreateEditDialog,
                   ),
-                  _buildCategoryManagementTab<Rarity>(
+                  CategoryManagementTab<Rarity>(
                     categoryLabel: 'Rarity',
                     values: context.watch<AppState>().rarities,
                     createFunction: CueCardCreator.createRarity,
                     updateFunction: CueCardCreator.updateRarity,
                     deleteFunction: CueCardCreator.deleteRarity,
                     refreshFunction: widget.refreshRarities,
+                    showCreateEditDialog: _showCreateEditDialog,
                   ),
                 ],
               ),
@@ -89,26 +91,7 @@ class _ManagementModalState extends State<ManagementModal> with SingleTickerProv
       ],
     );
   }
-
-  Widget _buildCategoryManagementTab<T extends Categorizable>({
-    required String categoryLabel,
-    required List<T> values,
-    required Future<bool> Function(String, Color) createFunction,
-    required Future<bool> Function(int, String, Color) updateFunction,
-    required Function(int) deleteFunction,
-    required Function() refreshFunction,
-  }) {
-    return CategoryManagementTab<T>(
-      categoryLabel: categoryLabel,
-      values: values,
-      createFunction: createFunction,
-      updateFunction: updateFunction,
-      deleteFunction: deleteFunction,
-      refreshFunction: refreshFunction,
-      showCreateEditDialog: _showCreateEditDialog,
-    );
-  }
-
+  
   void _showCreateEditDialog<T extends Categorizable>({
     required BuildContext context,
     required String label,
@@ -118,7 +101,6 @@ class _ManagementModalState extends State<ManagementModal> with SingleTickerProv
     required Function() refreshFunction,
     T? item,
   }) {
-
     showDialog(
       context: context,
       builder: (context) => ManageCategoryDialog<T>(
