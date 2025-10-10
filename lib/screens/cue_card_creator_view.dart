@@ -132,6 +132,8 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
           height: minConstraint,
           child: CueCardView(
             controllers: _controllers,
+            currentSelectedCardType: _currentSelectedCardType,
+            currentSelectedRarity: _currentSelectedRarity,
             image: image,
             onImageSelected: (XFile? image) {
               setState(() {

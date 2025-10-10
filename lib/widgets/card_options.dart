@@ -3,7 +3,7 @@ import 'package:dnd_cuecard_app/logic/cue_card_creator.dart';
 import 'package:dnd_cuecard_app/models/card_type.dart';
 import 'package:dnd_cuecard_app/models/rarity.dart';
 import 'package:dnd_cuecard_app/screens/cue_card_form_controllers.dart';
-import 'package:dnd_cuecard_app/screens/management_modal.dart';
+import 'package:dnd_cuecard_app/screens/management_modal_view.dart';
 import 'package:dnd_cuecard_app/widgets/categorizable_dropdown_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -64,7 +64,7 @@ class CardOptions extends StatelessWidget {
       showDialog(
         context: context,
         builder: (BuildContext context) {
-          return ManagementModal(
+          return ManagementModalView(
             refreshCardTypes: appState.loadCardTypes,
             refreshRarities: appState.loadRarities,
           );

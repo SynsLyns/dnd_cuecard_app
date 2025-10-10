@@ -9,21 +9,21 @@ import '../app_state.dart';
 import 'package:dnd_cuecard_app/models/card_type.dart';
 import 'package:dnd_cuecard_app/models/rarity.dart';
 
-class ManagementModal extends StatefulWidget {
+class ManagementModalView extends StatefulWidget {
   final Function() refreshCardTypes;
   final Function() refreshRarities;
 
-  const ManagementModal({
+  const ManagementModalView({
     super.key,
     required this.refreshCardTypes,
     required this.refreshRarities,
   });
 
   @override
-  State<ManagementModal> createState() => _ManagementModalState();
+  State<ManagementModalView> createState() => _ManagementModalViewState();
 }
 
-class _ManagementModalState extends State<ManagementModal> with SingleTickerProviderStateMixin {
+class _ManagementModalViewState extends State<ManagementModalView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
