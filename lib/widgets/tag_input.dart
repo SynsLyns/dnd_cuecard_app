@@ -1,0 +1,96 @@
+import 'package:dnd_cuecard_app/models/tag.dart';
+import 'package:dnd_cuecard_app/widgets/tag_chip.dart';
+import 'package:flutter/material.dart';
+
+class TagInputField extends StatefulWidget {
+  const TagInputField({
+    super.key,
+    required this.suggestions,
+  });
+
+  final List<Tag> suggestions;
+
+  @override
+  State<TagInputField> createState() => _TagInputFieldState();
+}
+
+class _TagInputFieldState extends State<TagInputField> {
+  final List<Tag> _tags = [];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildTagList(),
+        const SizedBox(height: 8),
+        _buildAutocomplete(),
+      ],
+    );
+  }
+
+  Widget _buildTagList() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _tags.map((tag) {
+        void removeTag(Tag tag) {
+          setState(() {
+            _tags.remove(tag);
+          });
+        }
+        return TagChip(
+          tag: tag.name,
+          onRemove: () => removeTag(tag),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildAutocomplete() {
+    late final TextEditingController controller;
+    late final FocusNode focusNode;
+
+    void addTag(Tag tag) {
+      controller.clear();
+      focusNode.unfocus();
+      if (_tags.any((t) => t.name == tag.name)) return;
+      setState(() {
+        _tags.add(tag);
+      });
+    }
+
+    return Autocomplete<Tag>(
+      optionsBuilder: (TextEditingValue textEditingValue) {
+        return widget.suggestions.where((option) =>
+            !_tags.any((t) => t.name == option.name) &&
+            (textEditingValue.text.isEmpty ||
+                option.name.toLowerCase().contains(textEditingValue.text.toLowerCase())));
+      },
+      displayStringForOption: (option) => option.name,
+      onSelected: addTag,
+      fieldViewBuilder:
+          (context, textEditingController, textFocusNode, onFieldSubmitted) {
+        controller = textEditingController;
+        focusNode = textFocusNode;
+        return TextField(
+          controller: textEditingController,
+          focusNode: textFocusNode,
+          decoration: const InputDecoration(
+            labelText: 'Add a tag',
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (String value) {
+            final tag = widget.suggestions.firstWhere(
+                (element) => element.name.toLowerCase() == value.toLowerCase(),
+                orElse: () => Tag(name: ''));
+            if (tag.name.isNotEmpty) {
+              addTag(tag);
+            }
+          },
+        );
+      },
+    );
+  }
+}
+
