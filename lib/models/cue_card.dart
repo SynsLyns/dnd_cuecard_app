@@ -1,3 +1,5 @@
+import 'package:dnd_cuecard_app/models/tag.dart';
+
 class CueCard {
   final int? id;
   final String? title;
@@ -6,7 +8,7 @@ class CueCard {
   final String? box1;
   final String? box2;
   final String? notes;
-  final List<String> tags;
+  final List<Tag> tags;
   final DateTime? dateCreated;
   final int? type;
   final int? rarity;
@@ -42,7 +44,7 @@ class CueCard {
     };
   }
 
-  static CueCard fromMap(Map<String, Object?> map) {
+  static CueCard fromMap(Map<String, Object?> map, List<Tag> tags) {
     return CueCard(
       id: map['id'] as int?,
       title: map['title'] as String?,
@@ -51,6 +53,7 @@ class CueCard {
       box1: map['box1'] as String?,
       box2: map['box2'] as String?,
       notes: map['notes'] as String?,
+      tags: tags,
       dateCreated: map['date_created'] != null ? DateTime.parse(map['date_created'] as String) : null,
       type: map['type'] as int?,
       rarity: map['rarity'] as int?,
