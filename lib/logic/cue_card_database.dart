@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../models/card_type.dart';
@@ -140,6 +141,105 @@ class CueCardDatabase {
       ));
     }
     return cueCardList;
+  }
+
+  Future<List<CueCard>> getPaginatedCueCards(List<Tag> selectedTags, String searchText, int limit, int offset) async {
+    final db = await database;
+    final whereClauses = <String>[];
+    final whereArgs = <Object?>[];
+
+    if (searchText.isNotEmpty) {
+      whereClauses.add('LOWER(c.title) LIKE ?');
+      whereArgs.add('%${searchText.toLowerCase()}%');
+    }
+
+    String tagJoin = '';
+    String groupByHaving = '';
+
+    if (selectedTags.isNotEmpty) {
+      // Join cue_card_tags and tags
+      tagJoin = '''
+        INNER JOIN cue_card_tags AS cct ON c.id = cct.cue_card_id
+        INNER JOIN tags AS t ON cct.tag_id = t.id
+      ''';
+
+      // Filter by selected tag IDs
+      final tagIds = selectedTags.map((t) => t.id).whereType<int>().toList();
+      whereClauses.add('t.id IN (${List.filled(tagIds.length, '?').join(',')})');
+      whereArgs.addAll(tagIds);
+
+      // Ensure all selected tags are matched
+      groupByHaving = 'GROUP BY c.id HAVING COUNT(DISTINCT t.id) = ${tagIds.length}';
+    }
+
+    final whereString = whereClauses.isNotEmpty ? 'WHERE ${whereClauses.join(' AND ')}' : '';
+
+    final query = '''
+      SELECT c.*
+      FROM cue_cards AS c
+      $tagJoin
+      $whereString
+      $groupByHaving
+      ORDER BY c.id ASC
+      LIMIT ?
+      OFFSET ?
+    ''';
+
+    final result = await db.rawQuery(query, [...whereArgs, limit, offset]);
+
+    List<CueCard> cueCardList = [];
+    for (final cueCardMap in result) {
+      final int id = cueCardMap['id'] as int;
+      final List<Tag> tags = await getTagsForCueCard(id);
+      cueCardList.add(CueCard.fromMap(cueCardMap, tags));
+    }
+    return cueCardList;
+  }
+
+  Future<int> getTotalCueCardCount([List<Tag>? selectedTags, String? searchText]) async {
+    final db = await database;
+    final whereClauses = <String>[];
+    final whereArgs = <Object?>[];
+
+    if (searchText != null && searchText.isNotEmpty) {
+      whereClauses.add('LOWER(c.title) LIKE ?');
+      whereArgs.add('%${searchText.toLowerCase()}%');
+    }
+
+    String tagJoin = '';
+    String groupByHaving = '';
+
+    if (selectedTags != null && selectedTags.isNotEmpty) {
+      // Join cue_card_tags and tags
+      tagJoin = '''
+        INNER JOIN cue_card_tags AS cct ON c.id = cct.cue_card_id
+        INNER JOIN tags AS t ON cct.tag_id = t.id
+      ''';
+
+      // Filter by selected tag IDs
+      final tagIds = selectedTags.map((t) => t.id).whereType<int>().toList();
+      whereClauses.add('t.id IN (${List.filled(tagIds.length, '?').join(',')})');
+      whereArgs.addAll(tagIds);
+
+      // Ensure all selected tags are matched
+      groupByHaving = 'GROUP BY c.id HAVING COUNT(DISTINCT t.id) = ${tagIds.length}';
+    }
+
+    final whereString = whereClauses.isNotEmpty ? 'WHERE ${whereClauses.join(' AND ')}' : '';
+
+    final query = '''
+      SELECT COUNT(*)
+      FROM (
+        SELECT c.id
+        FROM cue_cards AS c
+        $tagJoin
+        $whereString
+        $groupByHaving
+      ) AS filtered_cue_cards
+    ''';
+
+    final count = Sqflite.firstIntValue(await db.rawQuery(query, whereArgs));
+    return count ?? 0;
   }
 
   Future<List<Tag>> getTagsForCueCard(int cueCardId) async {

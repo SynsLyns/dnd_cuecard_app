@@ -15,6 +15,18 @@ class AppState extends ChangeNotifier {
 
   CueCard? selectedCard;
 
+  int _currentPage = 1;
+  int _pageSize = 10;
+  int _totalCueCardCount = 0;
+
+  String searchText = '';
+  List<Tag> searchSelectedTags = [];
+
+  int get currentPage => _currentPage;
+  int get pageSize => _pageSize;
+  int get totalCueCardCount => _totalCueCardCount;
+  int get totalPages => (_totalCueCardCount / _pageSize).ceil();
+
   AppState();
 
   Future<void> init() async {
@@ -36,8 +48,13 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadCueCards() async {
-    cueCards = await _cueCardDatabase.getAllCueCards();
+  Future<void> loadCueCards({int? page, int? size}) async {
+    if (page != null) _currentPage = page;
+    if (size != null) _pageSize = size;
+
+    final offset = (_currentPage - 1) * _pageSize;
+    cueCards = await _cueCardDatabase.getPaginatedCueCards(searchSelectedTags, searchText, _pageSize, offset);
+    _totalCueCardCount = await _cueCardDatabase.getTotalCueCardCount(searchSelectedTags, searchText);
     notifyListeners();
   }
 
@@ -54,6 +71,22 @@ class AppState extends ChangeNotifier {
   Future<void> removeCueCard(int id) async {
     await _cueCardDatabase.deleteCueCard(id);
     cueCards.removeWhere((card) => card.id == id);
+    await loadCueCards(page: _currentPage, size: _pageSize); // Reload paginated cards
     notifyListeners();
+  }
+
+  void goToPage(int page) {
+    if (page > 0 && page <= totalPages) {
+      _currentPage = page;
+      loadCueCards(page: _currentPage);
+    }
+  }
+
+  void updateFilteredCueCards({List<Tag>? tags, String? text, int? size}) {
+    if (size != null) _pageSize = size;
+    if (tags != null) searchSelectedTags = tags;
+    if (text != null) searchText = text;
+    _currentPage = 1; // Reset to first page when page size changes
+    loadCueCards(page: _currentPage, size: _pageSize);
   }
 }

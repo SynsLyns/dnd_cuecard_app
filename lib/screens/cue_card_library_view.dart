@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:dnd_cuecard_app/app_state.dart';
 import 'package:dnd_cuecard_app/models/cue_card.dart';
+import 'package:dnd_cuecard_app/models/tag.dart';
+import 'package:dnd_cuecard_app/widgets/tag/tag_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dnd_cuecard_app/widgets/cue_card/hoverable_cue_card.dart';
@@ -12,70 +16,171 @@ class CueCardLibraryView extends StatefulWidget {
 }
 
 class _CueCardLibraryViewState extends State<CueCardLibraryView> {
-  final TextEditingController _searchController = TextEditingController();
-  String _searchText = '';
+  final List<Tag> _selectedTags = [];
 
-  @override
-  void initState() {
-    super.initState();
-    _searchController.addListener(() {
-      setState(() {
-        _searchText = _searchController.text;
-      });
+
+  Timer? _debounce;
+
+  void _onSearchChanged(AppState appState, [String? text, List<Tag>? tags]) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      appState.updateFilteredCueCards(text: text, tags: tags);
     });
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     AppState appState = context.watch<AppState>();
-    final List<CueCard> allCueCards = appState.cueCards;
-
-    final filteredCueCards = allCueCards.where((cueCard) {
-      return (cueCard.title ?? '').toLowerCase().contains(_searchText.toLowerCase());
-    }).toList();
+    final List<CueCard> filteredCueCards = appState.cueCards;
 
     return Container(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildTagList(),
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                labelText: 'Search by title',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.search),
-              ),
-            ),
+            child: _buildAutocomplete()
           ),
           Expanded(
             child: filteredCueCards.isEmpty
                 ? Center(
                     child: Text(
-                      _searchText.isEmpty
-                          ? 'No cue cards found'
-                          : 'No matching cue cards found',
+                      'No matching cue cards found',
                     ),
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(8.0),
-                    itemCount: filteredCueCards.length,
-                    itemBuilder: (context, index) {
-                      final cueCard = filteredCueCards[index];
-                      return HoverableCueCard(cueCard: cueCard);
-                    },
+                : Column(
+                    children: [
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(8.0),
+                          itemCount: filteredCueCards.length,
+                          itemBuilder: (context, index) {
+                            final cueCard = filteredCueCards[index];
+                            return HoverableCueCard(cueCard: cueCard);
+                          },
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back),
+                              onPressed: appState.currentPage > 1
+                                  ? () => appState.goToPage(appState.currentPage - 1)
+                                  : null,
+                            ),
+                            Text('Page ${appState.currentPage} of ${appState.totalPages}'),
+                            IconButton(
+                              icon: const Icon(Icons.arrow_forward),
+                              onPressed: appState.currentPage < appState.totalPages
+                                  ? () => appState.goToPage(appState.currentPage + 1)
+                                  : null,
+                            ),
+                            const SizedBox(width: 16),
+                            DropdownButton<int>(
+                              value: appState.pageSize,
+                              items: const [
+                                DropdownMenuItem(value: 5, child: Text('5 per page')),
+                                DropdownMenuItem(value: 10, child: Text('10 per page')),
+                                DropdownMenuItem(value: 20, child: Text('20 per page')),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) {
+                                  appState.updateFilteredCueCards(size: value);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
           ),
         ],
       ),
     );
   }
+
+  Widget _buildTagList() {
+    AppState appState = context.watch<AppState>();
+    return _selectedTags.isEmpty ? const SizedBox(height: 32) :
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: _selectedTags.map((tag) {
+          void removeTag(Tag tag) {
+            setState(() {
+              _selectedTags.remove(tag);
+              _onSearchChanged(appState, null, _selectedTags);
+            });
+          }
+          return TagChip(
+            tag: tag.name,
+            onRemove: () => removeTag(tag),
+          );
+        }).toList(),
+      );
+  }
+
+  Widget _buildAutocomplete() {
+    AppState appState = context.watch<AppState>();
+    List<Tag> suggestions = appState.tags;
+    late final TextEditingController controller;
+    late final FocusNode focusNode;
+
+    void addTag(Tag tag) {
+      controller.clear();
+      focusNode.unfocus();
+      if (_selectedTags.any((t) => t.name == tag.name)) return;
+      setState(() {
+        _selectedTags.add(tag);
+        _onSearchChanged(appState, null, _selectedTags);
+      });
+    }
+
+    return Autocomplete<Tag>(
+      key: ValueKey(suggestions.map((tag) => tag.id).join(',')),
+      optionsBuilder: (TextEditingValue textEditingValue) {
+        return suggestions.where((option) =>
+            !_selectedTags.any((t) => t.name == option.name) &&
+            (textEditingValue.text.isEmpty ||
+                option.name.toLowerCase().contains(textEditingValue.text.toLowerCase())));
+      },
+      displayStringForOption: (option) => option.name,
+      onSelected: addTag,
+      fieldViewBuilder:
+          (context, textEditingController, textFocusNode, onFieldSubmitted) {
+        textEditingController.addListener(() {
+          if (appState.searchText != textEditingController.text) {
+            _onSearchChanged(appState, textEditingController.text);
+          }
+        });
+        controller = textEditingController;
+        focusNode = textFocusNode;
+        return TextField(
+          controller: textEditingController,
+          focusNode: textFocusNode,
+          decoration: const InputDecoration(
+            labelText: 'Search by tag or title',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.search),
+          ),
+          onSubmitted: (String value) {
+            final tag = suggestions.firstWhere(
+                (element) => element.name.toLowerCase() == value.toLowerCase(),
+                orElse: () => Tag(name: ''));
+            if (tag.name.isNotEmpty) {
+              addTag(tag);
+            }
+          },
+        );
+      },
+    );
+  }
 }
+
 
