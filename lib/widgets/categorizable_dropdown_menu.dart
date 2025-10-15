@@ -1,8 +1,8 @@
 import 'package:dnd_cuecard_app/app_state.dart';
-import 'package:dnd_cuecard_app/interfaces/categorizable.dart';
+import 'package:dnd_cuecard_app/interfaces/nameable.dart';
 import 'package:flutter/material.dart';
 
-class CategorizableDropdownMenu<T extends Categorizable> extends StatelessWidget {
+class CategorizableDropdownMenu<T extends Nameable> extends StatelessWidget {
   const CategorizableDropdownMenu({
     super.key,
     required this.label,

@@ -1,5 +1,5 @@
 import 'package:dnd_cuecard_app/models/tag.dart';
-import 'package:dnd_cuecard_app/widgets/tag_chip.dart';
+import 'package:dnd_cuecard_app/widgets/tag/tag_chip.dart';
 import 'package:flutter/material.dart';
 
 class TagInputField extends StatefulWidget {

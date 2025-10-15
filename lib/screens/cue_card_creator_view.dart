@@ -10,7 +10,7 @@ import 'package:provider/provider.dart';
 import '../models/card_type.dart';
 import '../models/rarity.dart';
 import '../widgets/card_options.dart';
-import '../widgets/cue_card_widgets/cue_card_view.dart';
+import '../widgets/cue_card/cue_card_view.dart';
 
 class CueCardCreatorView extends StatefulWidget {
   const CueCardCreatorView({super.key});

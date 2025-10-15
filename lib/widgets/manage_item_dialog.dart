@@ -1,35 +1,43 @@
-import 'package:dnd_cuecard_app/models/tag.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
-class ManageTagDialog extends StatefulWidget {
-  const ManageTagDialog({
+class ManageItemDialog extends StatefulWidget {
+  const ManageItemDialog({
     super.key,
-    this.item,
+    this.id,
+    this.initialName,
+    this.initialColor,
+    this.supportsColor = false,
     required this.label,
-    required this.createFunction,
-    required this.updateFunction,
-    required this.deleteFunction,
-    required this.refreshFunction,
+    required this.onCreate,
+    required this.onUpdate,
+    required this.onDelete,
+    required this.onRefresh,
   });
 
-  final Tag? item;
   final String label;
-  final Future<bool> Function(String) createFunction;
-  final Future<bool> Function(int, String) updateFunction;
-  final Function(int) deleteFunction;
-  final Function() refreshFunction;
+  final String? initialName;
+  final Color? initialColor;
+  final bool supportsColor;
+  final Future<bool> Function({required String name, Color? color}) onCreate;
+  final Future<bool> Function({required int id, required String name, Color? color}) onUpdate;
+  final void Function(int) onDelete;
+  final void Function() onRefresh;
+  final int? id;
 
   @override
-  State<ManageTagDialog> createState() => _ManageTagDialogState();
+  State<ManageItemDialog> createState() => _ManageItemDialogState();
 }
 
-class _ManageTagDialogState extends State<ManageTagDialog> {
+class _ManageItemDialogState extends State<ManageItemDialog> {
   late TextEditingController _nameController;
+  late Color _selectedColor;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.item?.name);
+    _nameController = TextEditingController(text: widget.initialName ?? '');
+    _selectedColor = widget.initialColor ?? Colors.white;
   }
 
   @override
@@ -40,13 +48,13 @@ class _ManageTagDialogState extends State<ManageTagDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isNew = widget.item == null;
+    final bool isNew = widget.id == null;
 
     void handleDelete() {
-      if (widget.item != null && widget.item!.id != null) {
-        widget.deleteFunction(widget.item!.id!);
+      if (widget.id != null) {
+        widget.onDelete(widget.id!);
         Navigator.pop(context);
-        widget.refreshFunction();
+        widget.onRefresh();
       }
     }
 
@@ -54,10 +62,10 @@ class _ManageTagDialogState extends State<ManageTagDialog> {
       if (_nameController.text.isNotEmpty) {
         bool success;
         if (isNew) {
-          success = await widget.createFunction(_nameController.text);
+          success = await widget.onCreate(name: _nameController.text, color: widget.supportsColor ? _selectedColor : null);
         } else {
-          if (widget.item!.id != null) {
-            success = await widget.updateFunction(widget.item!.id!, _nameController.text);
+          if (widget.id != null) {
+            success = await widget.onUpdate(id: widget.id!, name: _nameController.text, color: _selectedColor);
           } else {
             success = false;
           }
@@ -65,7 +73,7 @@ class _ManageTagDialogState extends State<ManageTagDialog> {
 
         if (success) {
           if (context.mounted) Navigator.pop(context);
-          widget.refreshFunction();
+          widget.onRefresh();
         } else {
             if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -91,6 +99,17 @@ class _ManageTagDialogState extends State<ManageTagDialog> {
               border: OutlineInputBorder(),
             ),
           ),
+          if (widget.supportsColor) ...[
+            const SizedBox(height: 16),
+            ColorPicker(
+              pickerColor: _selectedColor,
+              onColorChanged: (color) => setState(() => _selectedColor = color),
+              paletteType: PaletteType.hueWheel,
+              enableAlpha: false,
+              labelTypes: const [],
+              hexInputBar: true,
+            )
+          ]
         ],
       ),
       actions: [

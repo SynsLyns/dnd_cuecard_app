@@ -1,5 +1,9 @@
-class Tag {
+import 'package:dnd_cuecard_app/interfaces/nameable.dart';
+
+class Tag implements Nameable {
+  @override
   final int? id;
+  @override
   final String name;
 
   Tag({

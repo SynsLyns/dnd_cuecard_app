@@ -1,31 +1,31 @@
-import 'package:dnd_cuecard_app/interfaces/categorizable.dart';
+import 'package:dnd_cuecard_app/interfaces/nameable.dart';
 import 'package:flutter/material.dart';
 
-class CategoryManagementTab<T extends Categorizable> extends StatelessWidget {
+class CategoryManagementTab<T extends Nameable> extends StatelessWidget {
   const CategoryManagementTab({
     super.key,
     required this.categoryLabel,
     required this.values,
-    required this.createFunction,
-    required this.updateFunction,
-    required this.deleteFunction,
-    required this.refreshFunction,
+    required this.onCreate,
+    required this.onUpdate,
+    required this.onDelete,
+    required this.onRefresh,
     required this.showCreateEditDialog,
   });
 
   final String categoryLabel;
   final List<T> values;
-  final Future<bool> Function(String, Color) createFunction;
-  final Future<bool> Function(int, String, Color) updateFunction;
-  final Function(int) deleteFunction;
-  final Function() refreshFunction;
-  final Function<U extends Categorizable>({
+  final Future<bool> Function({required String name, Color? color}) onCreate;
+  final Future<bool> Function({required int id, required String name, Color? color}) onUpdate;
+  final Function(int) onDelete;
+  final Function() onRefresh;
+  final Function<U extends Nameable>({
     required BuildContext context,
     required String label,
-    required Future<bool> Function(String, Color) createFunction,
-    required Future<bool> Function(int, String, Color) updateFunction,
-    required Function(int) deleteFunction,
-    required Function() refreshFunction,
+    required Future<bool> Function({required String name, Color? color}) onCreate,
+    required Future<bool> Function({required int id, required String name, Color? color}) onUpdate,
+    required Function(int) onDelete,
+    required Function() onRefresh,
     U? item,
   }) showCreateEditDialog;
 
@@ -43,10 +43,10 @@ class CategoryManagementTab<T extends Categorizable> extends StatelessWidget {
               onPressed: () => showCreateEditDialog<T>(
                 context: context,
                 label: categoryLabel,
-                createFunction: createFunction,
-                updateFunction: updateFunction,
-                deleteFunction: deleteFunction,
-                refreshFunction: refreshFunction,
+                onCreate: onCreate,
+                onUpdate: onUpdate,
+                onDelete: onDelete,
+                onRefresh: onRefresh,
                 item: item,
               ),
             ),
@@ -54,8 +54,8 @@ class CategoryManagementTab<T extends Categorizable> extends StatelessWidget {
               icon: const Icon(Icons.delete),
               onPressed: () {
                 if (item.id != null) {
-                  deleteFunction(item.id!);
-                  refreshFunction();
+                  onDelete(item.id!);
+                  onRefresh();
                 }
               },
             ),
@@ -76,10 +76,10 @@ class CategoryManagementTab<T extends Categorizable> extends StatelessWidget {
           onPressed: () => showCreateEditDialog<T>(
             context: context,
             label: categoryLabel,
-            createFunction: createFunction,
-            updateFunction: updateFunction,
-            deleteFunction: deleteFunction,
-            refreshFunction: refreshFunction,
+            onCreate: onCreate,
+            onUpdate: onUpdate,
+            onDelete: onDelete,
+            onRefresh: onRefresh,
           ),
           child: Text('Add New $categoryLabel'),
         ),

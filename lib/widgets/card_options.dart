@@ -5,7 +5,7 @@ import 'package:dnd_cuecard_app/models/rarity.dart';
 import 'package:dnd_cuecard_app/screens/cue_card_form_controllers.dart';
 import 'package:dnd_cuecard_app/screens/management_modal_view.dart';
 import 'package:dnd_cuecard_app/widgets/categorizable_dropdown_menu.dart';
-import 'package:dnd_cuecard_app/widgets/tag_input.dart';
+import 'package:dnd_cuecard_app/widgets/tag/tag_input.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 

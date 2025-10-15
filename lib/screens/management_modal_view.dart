@@ -1,8 +1,7 @@
+import 'package:dnd_cuecard_app/interfaces/colorable.dart';
 import 'package:dnd_cuecard_app/models/tag.dart';
-import 'package:dnd_cuecard_app/widgets/manage_category_dialog.dart';
-import 'package:dnd_cuecard_app/interfaces/categorizable.dart';
-import 'package:dnd_cuecard_app/widgets/manage_tag_dialog.dart';
-import 'package:dnd_cuecard_app/widgets/tag_management_tab.dart';
+import 'package:dnd_cuecard_app/interfaces/nameable.dart';
+import 'package:dnd_cuecard_app/widgets/manage_item_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:dnd_cuecard_app/widgets/category_management_tab.dart';
 import 'package:provider/provider.dart';
@@ -68,29 +67,29 @@ class _ManagementModalViewState extends State<ManagementModalView> with SingleTi
                   CategoryManagementTab<CardType>(
                     categoryLabel: 'Card Type',
                     values: context.watch<AppState>().cardTypes,
-                    createFunction: CueCardCreator.createCardType,
-                    updateFunction: CueCardCreator.updateCardType,
-                    deleteFunction: CueCardCreator.deleteCardType,
-                    refreshFunction: widget.refreshCardTypes,
+                    onCreate: ({required String name, Color? color}) => CueCardCreator.createCardType(name, color!),
+                    onUpdate: ({required int id, required String name, Color? color}) => CueCardCreator.updateCardType(id, name, color ?? Colors.white),
+                    onDelete: CueCardCreator.deleteCardType,
+                    onRefresh: widget.refreshCardTypes,
                     showCreateEditDialog: _showCreateEditDialog,
                   ),
                   CategoryManagementTab<Rarity>(
                     categoryLabel: 'Rarity',
                     values: context.watch<AppState>().rarities,
-                    createFunction: CueCardCreator.createRarity,
-                    updateFunction: CueCardCreator.updateRarity,
-                    deleteFunction: CueCardCreator.deleteRarity,
-                    refreshFunction: widget.refreshRarities,
+                    onCreate: ({required String name, Color? color}) => CueCardCreator.createRarity(name, color!),
+                    onUpdate: ({required int id, required String name, Color? color}) => CueCardCreator.updateRarity(id, name, color ?? Colors.white),
+                    onDelete: CueCardCreator.deleteRarity,
+                    onRefresh: widget.refreshRarities,
                     showCreateEditDialog: _showCreateEditDialog,
                   ),
-                  TagManagementTab(
+                  CategoryManagementTab<Tag>(
                     categoryLabel: 'Tags',
                     values: context.watch<AppState>().tags,
-                    createFunction: CueCardCreator.createTag,
-                    updateFunction: CueCardCreator.updateTag,
-                    deleteFunction: CueCardCreator.deleteTag,
-                    refreshFunction: widget.refreshTags,
-                    showCreateEditDialog: _showCreateTagEditDialog,
+                    onCreate: ({required String name, Color? color}) => CueCardCreator.createTag(name),
+                    onUpdate: ({required int id, required String name, Color? color}) => CueCardCreator.updateTag(id, name),
+                    onDelete: CueCardCreator.deleteTag,
+                    onRefresh: widget.refreshTags,
+                    showCreateEditDialog: _showCreateEditDialog,
                   ),
                 ],
               ),
@@ -107,46 +106,27 @@ class _ManagementModalViewState extends State<ManagementModalView> with SingleTi
     );
   }
   
-  void _showCreateEditDialog<T extends Categorizable>({
+  void _showCreateEditDialog<T extends Nameable>({
     required BuildContext context,
     required String label,
-    required Future<bool> Function(String, Color) createFunction,
-    required Future<bool> Function(int, String, Color) updateFunction,
-    required Function(int) deleteFunction,
-    required Function() refreshFunction,
+    required Future<bool> Function({required String name, Color? color}) onCreate,
+    required Future<bool> Function({required int id, required String name, Color? color}) onUpdate,
+    required Function(int) onDelete,
+    required Function() onRefresh,
     T? item,
   }) {
     showDialog(
       context: context,
-      builder: (context) => ManageCategoryDialog<T>(
-        item: item,
+      builder: (context) => ManageItemDialog(
+        id: item?.id,
+        initialName: item?.name,
+        initialColor: item is Colorable ? (item as Colorable).color : null,
+        supportsColor: item is Colorable,
         label: label,
-        createFunction: createFunction,
-        updateFunction: updateFunction,
-        deleteFunction: deleteFunction,
-        refreshFunction: refreshFunction,
-      ),
-    );
-  }
-
-  void _showCreateTagEditDialog({
-    required BuildContext context,
-    required String label,
-    required Future<bool> Function(String) createFunction,
-    required Future<bool> Function(int, String) updateFunction,
-    required Function(int) deleteFunction,
-    required Function() refreshFunction,
-    Tag? item,
-  }) {
-    showDialog(
-      context: context,
-      builder: (context) => ManageTagDialog(
-        item: item,
-        label: label,
-        createFunction: createFunction,
-        updateFunction: updateFunction,
-        deleteFunction: deleteFunction,
-        refreshFunction: refreshFunction,
+        onCreate: onCreate,
+        onUpdate: onUpdate,
+        onDelete: onDelete,
+        onRefresh: onRefresh,
       ),
     );
   }

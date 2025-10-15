@@ -2,7 +2,7 @@ import 'package:dnd_cuecard_app/app_state.dart';
 import 'package:dnd_cuecard_app/models/cue_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:dnd_cuecard_app/widgets/cue_card_widgets/hoverable_cue_card.dart';
+import 'package:dnd_cuecard_app/widgets/cue_card/hoverable_cue_card.dart';
 
 class CueCardLibraryView extends StatefulWidget {
   const CueCardLibraryView({super.key});
