@@ -40,38 +40,41 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
       return (cueCard.title ?? '').toLowerCase().contains(_searchText.toLowerCase());
     }).toList();
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: TextField(
-            controller: _searchController,
-            decoration: const InputDecoration(
-              labelText: 'Search by title',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.search),
+    return Container(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                labelText: 'Search by title',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.search),
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: filteredCueCards.isEmpty
-              ? Center(
-                  child: Text(
-                    _searchText.isEmpty
-                        ? 'No cue cards found'
-                        : 'No matching cue cards found',
+          Expanded(
+            child: filteredCueCards.isEmpty
+                ? Center(
+                    child: Text(
+                      _searchText.isEmpty
+                          ? 'No cue cards found'
+                          : 'No matching cue cards found',
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(8.0),
+                    itemCount: filteredCueCards.length,
+                    itemBuilder: (context, index) {
+                      final cueCard = filteredCueCards[index];
+                      return HoverableCueCard(cueCard: cueCard);
+                    },
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(8.0),
-                  itemCount: filteredCueCards.length,
-                  itemBuilder: (context, index) {
-                    final cueCard = filteredCueCards[index];
-                    return HoverableCueCard(cueCard: cueCard);
-                  },
-                ),
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }

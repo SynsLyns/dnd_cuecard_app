@@ -21,4 +21,12 @@ class CardType implements Categorizable {
       'color': color.toARGB32(),
     };
   }
+
+  static CardType fromMap(Map<String, Object?> map) {
+    return CardType(
+      id: map['id'] as int?,
+      name: map['name'] as String,
+      color: Color(map['color'] as int),
+    );
+  }
 }

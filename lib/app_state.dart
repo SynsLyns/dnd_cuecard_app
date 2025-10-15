@@ -2,6 +2,7 @@ import 'package:dnd_cuecard_app/logic/cue_card_database.dart';
 import 'package:dnd_cuecard_app/models/card_type.dart';
 import 'package:dnd_cuecard_app/models/cue_card.dart';
 import 'package:dnd_cuecard_app/models/rarity.dart';
+import 'package:dnd_cuecard_app/models/tag.dart';
 import 'package:flutter/material.dart';
 
 class AppState extends ChangeNotifier {
@@ -10,6 +11,7 @@ class AppState extends ChangeNotifier {
   List<CueCard> cueCards = [];
   List<Rarity> rarities = [];
   List<CardType> cardTypes = [];
+  List<Tag> tags = [];
 
   CueCard? selectedCard;
 
@@ -20,6 +22,7 @@ class AppState extends ChangeNotifier {
       loadRarities(),
       loadCardTypes(),
       loadCueCards(),
+      loadTags(),
     ]);
   }
 
@@ -35,6 +38,11 @@ class AppState extends ChangeNotifier {
 
   Future<void> loadCueCards() async {
     cueCards = await _cueCardDatabase.getAllCueCards();
+    notifyListeners();
+  }
+
+  Future<void> loadTags() async {
+    tags = await _cueCardDatabase.getTags();
     notifyListeners();
   }
 

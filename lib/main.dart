@@ -24,7 +24,7 @@ class MyApp extends StatelessWidget {
         title: 'DnD Cue Cards',
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal, brightness: Brightness.light),
         ),
         home: MyHomePage(),
       ),
@@ -48,30 +48,50 @@ class _MyHomePageState extends State<MyHomePage> {
         return Scaffold(
           body: Row(
             children: [
-              if (_isLibraryVisible)
-                AnimatedContainer(
-                  duration: Duration(milliseconds: 200),
-                  width: constraints.maxWidth / 4,
-                  child: CueCardLibraryView(),
+              Container(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Row(
+                  children: [
+                    if (_isLibraryVisible)
+                      AnimatedContainer(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHigh,
+                        duration: Duration(milliseconds: 200),
+                        width: constraints.maxWidth / 4,
+                        child: CueCardLibraryView(),
+                      ),
+                    Flex(
+                      direction: Axis.vertical,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            _isLibraryVisible
+                                ? Icons.chevron_left
+                              : Icons.chevron_right,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isLibraryVisible = !_isLibraryVisible;
+                          });
+                        },
+                      ),
+                      ]
+                    ),
+                  ],
                 ),
-              IconButton(
-                icon: Icon(_isLibraryVisible ? Icons.chevron_left : Icons.chevron_right),
-                onPressed: () {
-                  setState(() {
-                    _isLibraryVisible = !_isLibraryVisible;
-                  });
-                },
               ),
               Expanded(
                 child: Container(
-                  color: Theme.of(context).colorScheme.primaryContainer,
+                  color: Theme.of(context).colorScheme.surface,
                   child: CueCardCreatorView(),
                 ),
               ),
             ],
           ),
         );
-      }
+      },
     );
   }
 }

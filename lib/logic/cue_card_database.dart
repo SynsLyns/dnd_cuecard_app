@@ -1,15 +1,14 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/painting.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:flutter/foundation.dart';
 
 import '../models/card_type.dart';
 import '../models/cue_card.dart';
 import '../models/rarity.dart';
+import '../models/tag.dart';
 
 class CueCardDatabase {
   static final CueCardDatabase _instance = CueCardDatabase._internal();
@@ -94,9 +93,9 @@ class CueCardDatabase {
   Future<int> insertCueCard(CueCard cueCard) async {
     final db = await database;
     int id = await db.insert('cue_cards', cueCard.toMapForInsert());
-    for (String tagName in cueCard.tags) {
-      await db.insert('tags', {'name': tagName}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await db.insert('cue_card_tags', {'cue_card_id': id, 'tag_id': tagName});
+    for (String tagName in cueCard.tags.map((tag) => tag.name)) {
+      final tagId = await _getOrCreateTagId(db, tagName);
+      await db.insert('cue_card_tags', {'cue_card_id': id, 'tag_id': tagId}, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
     return id;
   }
@@ -104,27 +103,53 @@ class CueCardDatabase {
   Future<CueCard> getCueCard(int id) async {
     final db = await database;
     final List<Map<String, Object?>> cueCard = await db.query('cue_cards', where: 'id = ?', whereArgs: [id]);
-    return CueCard.fromMap(cueCard[0]);
+    final List<Tag> tags = await getTagsForCueCard(id);
+    return CueCard.fromMap(cueCard[0], tags);
   }
 
   Future<List<CueCard>> getAllCueCards() async {
     final db = await database;
     final List<Map<String, Object?>> cueCards = await db.query('cue_cards');
-    return [
-      for (final {
-        'id' : id as int?,
-        'title' : title as String?,
-        'requirements' : requirements as String?,
-        'description' : description as String?,
-        'box1' : box1 as String?,
-        'box2' : box2 as String?,
-        'notes' : notes as String?,
-        'type' : type as int?,
-        'rarity' : rarity as int?,
-        'icon' : icon as String?,
-      } in cueCards)
-      CueCard(id: id, title: title, requirements: requirements, description: description, box1: box1, box2: box2, notes: notes, tags: [], dateCreated: null, type: type, rarity: rarity, iconFilePath: icon),
-    ];
+    List<CueCard> cueCardList = [];
+    for (final cueCardMap in cueCards) {
+      final int id = cueCardMap['id'] as int;
+      final String? title = cueCardMap['title'] as String?;
+      final String? requirements = cueCardMap['requirements'] as String?;
+      final String? description = cueCardMap['description'] as String?;
+      final String? box1 = cueCardMap['box1'] as String?;
+      final String? box2 = cueCardMap['box2'] as String?;
+      final String? notes = cueCardMap['notes'] as String?;
+      final int? type = cueCardMap['type'] as int?;
+      final int? rarity = cueCardMap['rarity'] as int?;
+      final String? icon = cueCardMap['icon'] as String?;
+      final List<Tag> tags = await getTagsForCueCard(id);
+
+      cueCardList.add(CueCard(
+        id: id,
+        title: title,
+        requirements: requirements,
+        description: description,
+        box1: box1,
+        box2: box2,
+        notes: notes,
+        tags: tags,
+        dateCreated: null,
+        type: type,
+        rarity: rarity,
+        iconFilePath: icon,
+      ));
+    }
+    return cueCardList;
+  }
+
+  Future<List<Tag>> getTagsForCueCard(int cueCardId) async {
+    final db = await database;
+    final List<Map<String, Object?>> tagMaps = await db.rawQuery('''
+      SELECT T.id, T.name FROM tags AS T
+      INNER JOIN cue_card_tags AS CCT ON T.id = CCT.tag_id
+      WHERE CCT.cue_card_id = ?
+    ''', [cueCardId]);
+    return tagMaps.map((map) => Tag.fromMap(map)).toList();
   }
 
   Future<int> updateCueCard(CueCard cueCard) async {
@@ -135,7 +160,11 @@ class CueCardDatabase {
       where: 'id = ?',
       whereArgs: [cueCard.id],
     );
-    debugPrint('Updated cue card with id: ${cueCard.id}');
+    await db.delete('cue_card_tags', where: 'cue_card_id = ?', whereArgs: [cueCard.id]);
+    for (String tagName in cueCard.tags.map((tag) => tag.name)) {
+      final tagId = await _getOrCreateTagId(db, tagName);
+      await db.insert('cue_card_tags', {'cue_card_id': cueCard.id, 'tag_id': tagId}, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
     return result;
   }
 
@@ -151,14 +180,7 @@ class CueCardDatabase {
   Future<List<Rarity>> getRarities() async {
     final db = await database;
     final List<Map<String, Object?>> rarities = await db.query('rarities');
-    return [
-      for (final {
-        'id' : id as int,
-        'name' : name as String,
-        'color' : color as int,
-      } in rarities)
-      Rarity(id: id, name: name, color: Color(color)),
-    ];
+    return rarities.map((map) => Rarity.fromMap(map)).toList();
   }
 
   Future<int> insertRarity(Rarity rarity) async {
@@ -188,14 +210,7 @@ class CueCardDatabase {
   Future<List<CardType>> getCardTypes() async {
     final db = await database;
     final List<Map<String, Object?>> cardTypes = await db.query('card_types');
-    return [
-      for (final {
-        'id' : id as int,
-        'name' : name as String,
-        'color' : color as int,
-      } in cardTypes)
-      CardType(id: id, name: name, color: Color(color)),
-    ];
+    return cardTypes.map((map) => CardType.fromMap(map)).toList();
   }
 
   Future<int> insertCardType(CardType cardType) async {
@@ -222,6 +237,36 @@ class CueCardDatabase {
     );
   }
 
+  Future<List<Tag>> getTags() async {
+    final db = await database;
+    final List<Map<String, Object?>> tags = await db.query('tags');
+    return tags.map((map) => Tag.fromMap(map)).toList();
+  }
+
+  Future<int> insertTag(Tag tag) async {
+    final db = await database;
+    return await db.insert('tags', tag.toMapForInsert());
+  }
+
+  Future<int> updateTag(Tag tag) async {
+    final db = await database;
+    return await db.update(
+      'tags',
+      tag.toMapForInsert(),
+      where: 'id = ?',
+      whereArgs: [tag.id],
+    );
+  }
+
+  Future<int> deleteTag(int id) async {
+    final db = await database;
+    return await db.delete(
+      'tags',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   Future<bool> rarityNameExists(String name, [int? id]) async {
     final db = await database;
     List<Map<String, Object?>> result;
@@ -242,5 +287,30 @@ class CueCardDatabase {
       result = await db.query('card_types', where: 'name = ? AND id != ?', whereArgs: [name, id]);
     }
     return result.isNotEmpty;
+  }
+
+  Future<bool> tagNameExists(String name, [int? id]) async {
+    final db = await database;
+    List<Map<String, Object?>> result;
+    if (id == null) {
+      result = await db.query('tags', where: 'name = ?', whereArgs: [name]);
+    } else {
+      result = await db.query('tags', where: 'name = ? AND id != ?', whereArgs: [name, id]);
+    }
+    return result.isNotEmpty;
+  }
+
+  Future<int> _getOrCreateTagId(Database db, String tagName) async {
+    final List<Map<String, Object?>> existingTags = await db.query(
+      'tags',
+      where: 'name = ?',
+      whereArgs: [tagName],
+    );
+
+    if (existingTags.isNotEmpty) {
+      return existingTags.first['id'] as int;
+    } else {
+      return await db.insert('tags', {'name': tagName});
+    }
   }
 }

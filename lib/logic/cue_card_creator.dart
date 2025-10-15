@@ -5,13 +5,14 @@ import 'package:dnd_cuecard_app/logic/cue_card_database.dart';
 import 'package:dnd_cuecard_app/models/card_type.dart';
 import 'package:dnd_cuecard_app/models/cue_card.dart';
 import 'package:dnd_cuecard_app/models/rarity.dart';
+import 'package:dnd_cuecard_app/models/tag.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:crypto/crypto.dart';
 
 class CueCardCreator {
   static final CueCardDatabase _cueCardDatabase = CueCardDatabase();
 
-  static Future<void> createCueCard(String title, String requirements, String description, String box1, String box2, String notes, List<String> tags, int? type, int? rarity, String? iconFilePath) async {
+  static Future<void> createCueCard(String title, String requirements, String description, String box1, String box2, String notes, List<Tag> tags, int? type, int? rarity, String? iconFilePath) async {
     iconFilePath = await getIconFilePath(iconFilePath);
 
     CueCard cueCard = CueCard(
@@ -31,7 +32,7 @@ class CueCardCreator {
     await _cueCardDatabase.insertCueCard(cueCard);
   }
 
-  static Future<void> updateCueCard(int id, String title, String requirements, String description, String box1, String box2, String notes, List<String> tags, int? type, int? rarity, String? iconFilePath) async {
+  static Future<void> updateCueCard(int id, String title, String requirements, String description, String box1, String box2, String notes, List<Tag> tags, int? type, int? rarity, String? iconFilePath) async {
     iconFilePath = await getIconFilePath(iconFilePath);
 
     CueCard cueCard = CueCard(
@@ -91,6 +92,27 @@ class CueCardCreator {
   static Future<void> deleteRarity(int id) async {
     await _cueCardDatabase.deleteRarity(id);
   }
+
+  static Future<bool> createTag(String name) async {
+    if (await _cueCardDatabase.tagNameExists(name)) {
+      return false;
+    }
+    await _cueCardDatabase.insertTag(Tag(name: name));
+    return true;
+  }
+
+  static Future<bool> updateTag(int id, String name) async {
+    if (await _cueCardDatabase.tagNameExists(name, id)) {
+      return false;
+    }
+    await _cueCardDatabase.updateTag(Tag(id: id, name: name));
+    return true;
+  }
+
+  static Future<void> deleteTag(int id) async {
+    await _cueCardDatabase.deleteTag(id);
+  }
+
 
   static Future<String?> getIconFilePath(String? iconFilePath) async {
     if (iconFilePath == null) {

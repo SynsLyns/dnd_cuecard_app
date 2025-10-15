@@ -3,6 +3,7 @@ import 'package:dnd_cuecard_app/logic/cue_card_creator.dart';
 import 'package:dnd_cuecard_app/models/card_type.dart';
 import 'package:dnd_cuecard_app/models/cue_card.dart';
 import 'package:dnd_cuecard_app/models/rarity.dart';
+import 'package:dnd_cuecard_app/models/tag.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -15,6 +16,7 @@ class CueCardFormControllers {
   final box2Controller = TextEditingController();
   final cardTypeController = TextEditingController();
   final rarityController = TextEditingController();
+  List<Tag> tags = [];
 
   void dispose() {
     titleController.dispose();
@@ -25,6 +27,7 @@ class CueCardFormControllers {
     box2Controller.dispose();
     cardTypeController.dispose();
     rarityController.dispose();
+    tags.clear();
   }
 
   void loadCard(CueCard card, AppState appState) {
@@ -32,6 +35,7 @@ class CueCardFormControllers {
     requirementsController.text = card.requirements ?? '';
     descriptionController.text = card.description ?? '';
     notesController.text = card.notes ?? '';
+    tags = List<Tag>.from(card.tags);
     box1Controller.text = card.box1 ?? '';
     box2Controller.text = card.box2 ?? '';
     
@@ -61,7 +65,7 @@ class CueCardFormControllers {
         box1Controller.text,
         box2Controller.text,
         notesController.text,
-        [],
+        tags,
         cardTypeController.text.isEmpty ? null : cardTypes.firstWhere((type) => type.name == cardTypeController.text).id,
         rarityController.text.isEmpty ? null : rarities.firstWhere((r) => r.name == rarityController.text).id,
         image?.path,
@@ -75,7 +79,7 @@ class CueCardFormControllers {
         box1Controller.text,
         box2Controller.text,
         notesController.text,
-        [],
+        tags,
         cardTypeController.text.isEmpty ? null : cardTypes.firstWhere((type) => type.name == cardTypeController.text).id,
         rarityController.text.isEmpty ? null : rarities.firstWhere((r) => r.name == rarityController.text).id,
         image?.path,
@@ -93,6 +97,7 @@ class CueCardFormControllers {
     box1Controller.clear();
     box2Controller.clear();
     notesController.clear();
+    tags.clear();
     cardTypeController.clear();
     rarityController.clear();
     appState.selectCard(null);

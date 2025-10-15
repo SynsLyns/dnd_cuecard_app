@@ -21,4 +21,12 @@ class Rarity implements Categorizable {
       'color': color.toARGB32(),
     };
   }
+
+  static Rarity fromMap(Map<String, Object?> map) {
+    return Rarity(
+      id: map['id'] as int?,
+      name: map['name'] as String,
+      color: Color(map['color'] as int),
+    );
+  }
 }

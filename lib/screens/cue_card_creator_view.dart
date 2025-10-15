@@ -95,7 +95,6 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
 
     void handleNewCard() {
       clearCueCard();
-      context.read<AppState>().selectCard(null);
     }
 
     return LayoutBuilder(

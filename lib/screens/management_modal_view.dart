@@ -1,5 +1,8 @@
+import 'package:dnd_cuecard_app/models/tag.dart';
 import 'package:dnd_cuecard_app/widgets/manage_category_dialog.dart';
 import 'package:dnd_cuecard_app/interfaces/categorizable.dart';
+import 'package:dnd_cuecard_app/widgets/manage_tag_dialog.dart';
+import 'package:dnd_cuecard_app/widgets/tag_management_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:dnd_cuecard_app/widgets/category_management_tab.dart';
 import 'package:provider/provider.dart';
@@ -12,11 +15,13 @@ import 'package:dnd_cuecard_app/models/rarity.dart';
 class ManagementModalView extends StatefulWidget {
   final Function() refreshCardTypes;
   final Function() refreshRarities;
+  final Function() refreshTags;
 
   const ManagementModalView({
     super.key,
     required this.refreshCardTypes,
     required this.refreshRarities,
+    required this.refreshTags,
   });
 
   @override
@@ -29,7 +34,7 @@ class _ManagementModalViewState extends State<ManagementModalView> with SingleTi
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -52,6 +57,7 @@ class _ManagementModalViewState extends State<ManagementModalView> with SingleTi
               tabs: const [
                 Tab(text: 'Card Types'),
                 Tab(text: 'Rarities'),
+                Tab(text: 'Tags'),
               ],
             ),
             SizedBox(
@@ -76,6 +82,15 @@ class _ManagementModalViewState extends State<ManagementModalView> with SingleTi
                     deleteFunction: CueCardCreator.deleteRarity,
                     refreshFunction: widget.refreshRarities,
                     showCreateEditDialog: _showCreateEditDialog,
+                  ),
+                  TagManagementTab(
+                    categoryLabel: 'Tags',
+                    values: context.watch<AppState>().tags,
+                    createFunction: CueCardCreator.createTag,
+                    updateFunction: CueCardCreator.updateTag,
+                    deleteFunction: CueCardCreator.deleteTag,
+                    refreshFunction: widget.refreshTags,
+                    showCreateEditDialog: _showCreateTagEditDialog,
                   ),
                 ],
               ),
@@ -104,6 +119,28 @@ class _ManagementModalViewState extends State<ManagementModalView> with SingleTi
     showDialog(
       context: context,
       builder: (context) => ManageCategoryDialog<T>(
+        item: item,
+        label: label,
+        createFunction: createFunction,
+        updateFunction: updateFunction,
+        deleteFunction: deleteFunction,
+        refreshFunction: refreshFunction,
+      ),
+    );
+  }
+
+  void _showCreateTagEditDialog({
+    required BuildContext context,
+    required String label,
+    required Future<bool> Function(String) createFunction,
+    required Future<bool> Function(int, String) updateFunction,
+    required Function(int) deleteFunction,
+    required Function() refreshFunction,
+    Tag? item,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => ManageTagDialog(
         item: item,
         label: label,
         createFunction: createFunction,

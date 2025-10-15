@@ -6,17 +6,18 @@ class TagInputField extends StatefulWidget {
   const TagInputField({
     super.key,
     required this.suggestions,
+    required this.selectedTags,
   });
 
+  
   final List<Tag> suggestions;
+  final List<Tag> selectedTags;
 
   @override
   State<TagInputField> createState() => _TagInputFieldState();
 }
 
 class _TagInputFieldState extends State<TagInputField> {
-  final List<Tag> _tags = [];
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -33,10 +34,10 @@ class _TagInputFieldState extends State<TagInputField> {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: _tags.map((tag) {
+      children: widget.selectedTags.map((tag) {
         void removeTag(Tag tag) {
           setState(() {
-            _tags.remove(tag);
+            widget.selectedTags.remove(tag);
           });
         }
         return TagChip(
@@ -54,16 +55,16 @@ class _TagInputFieldState extends State<TagInputField> {
     void addTag(Tag tag) {
       controller.clear();
       focusNode.unfocus();
-      if (_tags.any((t) => t.name == tag.name)) return;
+      if (widget.selectedTags.any((t) => t.name == tag.name)) return;
       setState(() {
-        _tags.add(tag);
+        widget.selectedTags.add(tag);
       });
     }
 
     return Autocomplete<Tag>(
       optionsBuilder: (TextEditingValue textEditingValue) {
         return widget.suggestions.where((option) =>
-            !_tags.any((t) => t.name == option.name) &&
+            !widget.selectedTags.any((t) => t.name == option.name) &&
             (textEditingValue.text.isEmpty ||
                 option.name.toLowerCase().contains(textEditingValue.text.toLowerCase())));
       },

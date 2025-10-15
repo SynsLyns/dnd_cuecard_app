@@ -5,6 +5,7 @@ import 'package:dnd_cuecard_app/models/rarity.dart';
 import 'package:dnd_cuecard_app/screens/cue_card_form_controllers.dart';
 import 'package:dnd_cuecard_app/screens/management_modal_view.dart';
 import 'package:dnd_cuecard_app/widgets/categorizable_dropdown_menu.dart';
+import 'package:dnd_cuecard_app/widgets/tag_input.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -67,6 +68,7 @@ class CardOptions extends StatelessWidget {
           return ManagementModalView(
             refreshCardTypes: appState.loadCardTypes,
             refreshRarities: appState.loadRarities,
+            refreshTags: appState.loadTags,
           );
         },
       );
@@ -92,7 +94,13 @@ class CardOptions extends StatelessWidget {
             onPressed: handleManageCategories,
           ),
         ),
-        const Spacer(flex: 10)
+        Expanded(
+          flex: 10,
+          child: TagInputField(
+            selectedTags: _controllers.tags,
+            suggestions: appState.tags,
+          )
+        )
       ],
     );
   }
