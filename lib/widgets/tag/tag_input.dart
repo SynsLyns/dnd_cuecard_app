@@ -24,28 +24,29 @@ class _TagInputFieldState extends State<TagInputField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildTagList(),
-        const SizedBox(height: 8),
+        const SizedBox(height: 24),
         _buildAutocomplete(),
       ],
     );
   }
 
   Widget _buildTagList() {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: widget.selectedTags.map((tag) {
-        void removeTag(Tag tag) {
-          setState(() {
-            widget.selectedTags.remove(tag);
-          });
-        }
-        return TagChip(
-          tag: tag.name,
-          onRemove: () => removeTag(tag),
-        );
-      }).toList(),
-    );
+    return widget.selectedTags.isEmpty ? const SizedBox(height: 32) :
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: widget.selectedTags.map((tag) {
+          void removeTag(Tag tag) {
+            setState(() {
+              widget.selectedTags.remove(tag);
+            });
+          }
+          return TagChip(
+            tag: tag.name,
+            onRemove: () => removeTag(tag),
+          );
+        }).toList(),
+      );
   }
 
   Widget _buildAutocomplete() {
@@ -62,6 +63,7 @@ class _TagInputFieldState extends State<TagInputField> {
     }
 
     return Autocomplete<Tag>(
+      key: ValueKey(widget.suggestions.hashCode),
       optionsBuilder: (TextEditingValue textEditingValue) {
         return widget.suggestions.where((option) =>
             !widget.selectedTags.any((t) => t.name == option.name) &&

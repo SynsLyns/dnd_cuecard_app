@@ -3,7 +3,6 @@ import 'package:dnd_cuecard_app/logic/cue_card_creator.dart';
 import 'package:dnd_cuecard_app/models/card_type.dart';
 import 'package:dnd_cuecard_app/models/rarity.dart';
 import 'package:dnd_cuecard_app/screens/cue_card_form_controllers.dart';
-import 'package:dnd_cuecard_app/screens/management_modal_view.dart';
 import 'package:dnd_cuecard_app/widgets/categorizable_dropdown_menu.dart';
 import 'package:dnd_cuecard_app/widgets/tag/tag_input.dart';
 import 'package:flutter/material.dart';
@@ -60,20 +59,7 @@ class CardOptions extends StatelessWidget {
       refreshFunction: appState.loadRarities,
       appState: appState,
     );
-
-    void handleManageCategories() {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return ManagementModalView(
-            refreshCardTypes: appState.loadCardTypes,
-            refreshRarities: appState.loadRarities,
-            refreshTags: appState.loadTags,
-          );
-        },
-      );
-    }
-
+    
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -88,12 +74,7 @@ class CardOptions extends StatelessWidget {
             ],
           ),
         ),
-        Expanded(
-          child: IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: handleManageCategories,
-          ),
-        ),
+        const SizedBox(width: 16),
         Expanded(
           flex: 10,
           child: TagInputField(

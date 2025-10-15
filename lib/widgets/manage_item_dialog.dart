@@ -94,6 +94,7 @@ class _ManageItemDialogState extends State<ManageItemDialog> {
         children: [
           TextField(
             controller: _nameController,
+            autofocus: isNew || !widget.supportsColor,
             decoration: const InputDecoration(
               labelText: 'Name',
               border: OutlineInputBorder(),

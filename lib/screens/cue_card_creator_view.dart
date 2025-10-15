@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:dnd_cuecard_app/app_state.dart';
 import 'package:dnd_cuecard_app/models/cue_card.dart';
 import 'package:dnd_cuecard_app/screens/cue_card_form_controllers.dart';
+import 'package:dnd_cuecard_app/screens/management_modal_view.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -97,6 +98,20 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
       clearCueCard();
     }
 
+    void handleManageCategories() {
+      var appState = context.read<AppState>();
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return ManagementModalView(
+            refreshCardTypes: appState.loadCardTypes,
+            refreshRarities: appState.loadRarities,
+            refreshTags: appState.loadTags,
+          );
+        },
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         var minConstraint = min(constraints.maxWidth, constraints.maxHeight);
@@ -121,6 +136,11 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
                     ElevatedButton(
                       onPressed: handleNewCard,
                       child: const Text('New Card'),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton(
+                      onPressed: handleManageCategories,
+                      child: const Text('Manage Categories'),
                     ),
                   ],
                 ),
