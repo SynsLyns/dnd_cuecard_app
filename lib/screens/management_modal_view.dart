@@ -44,6 +44,32 @@ class _ManagementModalViewState extends State<ManagementModalView> with SingleTi
 
   @override
   Widget build(BuildContext context) {
+
+    void showCreateEditDialog<T extends Nameable>({
+      required String label,
+      required Future<bool> Function(String name, Color? color) onCreate,
+      required Future<bool> Function(int id, String name, Color? color) onUpdate,
+      required Function(int) onDelete,
+      required Function() onRefresh,
+      T? item,
+      bool supportsColor = false,
+    }) {
+      showDialog(
+        context: context,
+        builder: (context) => ManageItemDialog(
+          id: item?.id,
+          initialName: item?.name,
+          initialColor: item is Colorable ? (item as Colorable).color : null,
+          supportsColor: supportsColor,
+          label: label,
+          onCreate: onCreate,
+          onUpdate: onUpdate,
+          onDelete: onDelete,
+          onRefresh: onRefresh,
+        ),
+      );
+    }
+
     return AlertDialog(
       title: const Text('Manage Categories'),
       content: SizedBox(
@@ -67,29 +93,29 @@ class _ManagementModalViewState extends State<ManagementModalView> with SingleTi
                   CategoryManagementTab<CardType>(
                     categoryLabel: 'Card Type',
                     values: context.watch<AppState>().cardTypes,
-                    onCreate: ({required String name, Color? color}) => CueCardCreator.createCardType(name, color!),
-                    onUpdate: ({required int id, required String name, Color? color}) => CueCardCreator.updateCardType(id, name, color ?? Colors.white),
+                    onCreate: (String name, Color? color) => CueCardCreator.createCardType(name, color!),
+                    onUpdate: (int id, String name, Color? color) => CueCardCreator.updateCardType(id, name, color ?? Colors.white),
                     onDelete: CueCardCreator.deleteCardType,
                     onRefresh: widget.refreshCardTypes,
-                    showCreateEditDialog: _showCreateEditDialog,
+                    showCreateEditDialog: showCreateEditDialog,
                   ),
                   CategoryManagementTab<Rarity>(
                     categoryLabel: 'Rarity',
                     values: context.watch<AppState>().rarities,
-                    onCreate: ({required String name, Color? color}) => CueCardCreator.createRarity(name, color!),
-                    onUpdate: ({required int id, required String name, Color? color}) => CueCardCreator.updateRarity(id, name, color ?? Colors.white),
+                    onCreate: (String name, Color? color) => CueCardCreator.createRarity(name, color!),
+                    onUpdate: (int id, String name, Color? color) => CueCardCreator.updateRarity(id, name, color ?? Colors.white),
                     onDelete: CueCardCreator.deleteRarity,
                     onRefresh: widget.refreshRarities,
-                    showCreateEditDialog: _showCreateEditDialog,
+                    showCreateEditDialog: showCreateEditDialog,
                   ),
                   CategoryManagementTab<Tag>(
                     categoryLabel: 'Tags',
                     values: context.watch<AppState>().tags,
-                    onCreate: ({required String name, Color? color}) => CueCardCreator.createTag(name),
-                    onUpdate: ({required int id, required String name, Color? color}) => CueCardCreator.updateTag(id, name),
+                    onCreate: (String name, Color? color) => CueCardCreator.createTag(name),
+                    onUpdate: (int id, String name, Color? color) => CueCardCreator.updateTag(id, name),
                     onDelete: CueCardCreator.deleteTag,
                     onRefresh: widget.refreshTags,
-                    showCreateEditDialog: _showCreateEditDialog,
+                    showCreateEditDialog: showCreateEditDialog,
                   ),
                 ],
               ),
@@ -103,31 +129,6 @@ class _ManagementModalViewState extends State<ManagementModalView> with SingleTi
           child: const Text('Close'),
         ),
       ],
-    );
-  }
-  
-  void _showCreateEditDialog<T extends Nameable>({
-    required BuildContext context,
-    required String label,
-    required Future<bool> Function({required String name, Color? color}) onCreate,
-    required Future<bool> Function({required int id, required String name, Color? color}) onUpdate,
-    required Function(int) onDelete,
-    required Function() onRefresh,
-    T? item,
-  }) {
-    showDialog(
-      context: context,
-      builder: (context) => ManageItemDialog(
-        id: item?.id,
-        initialName: item?.name,
-        initialColor: item is Colorable ? (item as Colorable).color : null,
-        supportsColor: item is Colorable,
-        label: label,
-        onCreate: onCreate,
-        onUpdate: onUpdate,
-        onDelete: onDelete,
-        onRefresh: onRefresh,
-      ),
     );
   }
 }

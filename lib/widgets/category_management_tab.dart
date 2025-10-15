@@ -1,4 +1,6 @@
 import 'package:dnd_cuecard_app/interfaces/nameable.dart';
+import 'package:dnd_cuecard_app/models/card_type.dart';
+import 'package:dnd_cuecard_app/models/rarity.dart';
 import 'package:flutter/material.dart';
 
 class CategoryManagementTab<T extends Nameable> extends StatelessWidget {
@@ -15,22 +17,35 @@ class CategoryManagementTab<T extends Nameable> extends StatelessWidget {
 
   final String categoryLabel;
   final List<T> values;
-  final Future<bool> Function({required String name, Color? color}) onCreate;
-  final Future<bool> Function({required int id, required String name, Color? color}) onUpdate;
+  final Future<bool> Function(String name, Color? color) onCreate;
+  final Future<bool> Function(int id, String name, Color? color) onUpdate;
   final Function(int) onDelete;
   final Function() onRefresh;
   final Function<U extends Nameable>({
-    required BuildContext context,
     required String label,
-    required Future<bool> Function({required String name, Color? color}) onCreate,
-    required Future<bool> Function({required int id, required String name, Color? color}) onUpdate,
+    required Future<bool> Function(String name, Color? color) onCreate,
+    required Future<bool> Function(int id, String name, Color? color) onUpdate,
     required Function(int) onDelete,
     required Function() onRefresh,
     U? item,
+    bool supportsColor
   }) showCreateEditDialog;
 
   @override
   Widget build(BuildContext context) {
+
+    void showManageDialog(T? item) {
+      showCreateEditDialog(
+        label: categoryLabel,
+        onCreate: onCreate,
+        onUpdate: onUpdate,
+        onDelete: onDelete,
+        onRefresh: onRefresh,
+        item: item,
+        supportsColor: T == CardType || T == Rarity,
+      );
+    }
+
     ListTile buildListTile(BuildContext context, int index) {
       final T item = values[index];
       return ListTile(
@@ -40,15 +55,7 @@ class CategoryManagementTab<T extends Nameable> extends StatelessWidget {
           children: [
             IconButton(
               icon: const Icon(Icons.edit),
-              onPressed: () => showCreateEditDialog<T>(
-                context: context,
-                label: categoryLabel,
-                onCreate: onCreate,
-                onUpdate: onUpdate,
-                onDelete: onDelete,
-                onRefresh: onRefresh,
-                item: item,
-              ),
+              onPressed: () => showManageDialog(item),
             ),
             IconButton(
               icon: const Icon(Icons.delete),
@@ -73,17 +80,10 @@ class CategoryManagementTab<T extends Nameable> extends StatelessWidget {
           ),
         ),
         ElevatedButton(
-          onPressed: () => showCreateEditDialog<T>(
-            context: context,
-            label: categoryLabel,
-            onCreate: onCreate,
-            onUpdate: onUpdate,
-            onDelete: onDelete,
-            onRefresh: onRefresh,
-          ),
+          onPressed: () => showManageDialog(null),
           child: Text('Add New $categoryLabel'),
         ),
-        SizedBox(height: 1)
+        SizedBox(height: 5)
       ],
     );
   }

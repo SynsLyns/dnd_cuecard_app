@@ -19,8 +19,8 @@ class ManageItemDialog extends StatefulWidget {
   final String? initialName;
   final Color? initialColor;
   final bool supportsColor;
-  final Future<bool> Function({required String name, Color? color}) onCreate;
-  final Future<bool> Function({required int id, required String name, Color? color}) onUpdate;
+  final Future<bool> Function(String name, Color? color) onCreate;
+  final Future<bool> Function(int id, String name, Color? color) onUpdate;
   final void Function(int) onDelete;
   final void Function() onRefresh;
   final int? id;
@@ -62,10 +62,10 @@ class _ManageItemDialogState extends State<ManageItemDialog> {
       if (_nameController.text.isNotEmpty) {
         bool success;
         if (isNew) {
-          success = await widget.onCreate(name: _nameController.text, color: widget.supportsColor ? _selectedColor : null);
+          success = await widget.onCreate(_nameController.text, widget.supportsColor ? _selectedColor : null);
         } else {
           if (widget.id != null) {
-            success = await widget.onUpdate(id: widget.id!, name: _nameController.text, color: _selectedColor);
+            success = await widget.onUpdate(widget.id!, _nameController.text, _selectedColor);
           } else {
             success = false;
           }
