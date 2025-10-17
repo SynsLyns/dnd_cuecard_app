@@ -53,11 +53,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: Row(
                   children: [
                     if (_isLibraryVisible)
-                      AnimatedContainer(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHigh,
-                        duration: Duration(milliseconds: 200),
+                      Container(
+                        color: Theme.of(context).colorScheme.surfaceContainerHigh,
                         width: constraints.maxWidth / 4,
                         child: CueCardLibraryView(),
                       ),

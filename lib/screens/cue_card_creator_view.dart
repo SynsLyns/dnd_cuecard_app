@@ -123,26 +123,32 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
               children: [
                 _buildCueCardView(minConstraint: minConstraint * 0.7),
                 SizedBox(height: minConstraint * 0.02),
-                options,
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: minConstraint * 0.13),
+                  child: options
+                ),
                 SizedBox(height: minConstraint * 0.02),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedButton(
-                      onPressed: handleSave,
-                      child: const Text('Save'),
-                    ),
-                    const SizedBox(width: 16),
-                    ElevatedButton(
-                      onPressed: handleNewCard,
-                      child: const Text('New Card'),
-                    ),
-                    const SizedBox(width: 16),
-                    ElevatedButton(
-                      onPressed: handleManageCategories,
-                      child: const Text('Manage Categories'),
-                    ),
-                  ],
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: minConstraint * 0.13),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: handleSave,
+                        child: const Text('Save'),
+                      ),
+                      const SizedBox(width: 16),
+                      ElevatedButton(
+                        onPressed: handleNewCard,
+                        child: const Text('New Card'),
+                      ),
+                      const SizedBox(width: 16),
+                      ElevatedButton(
+                        onPressed: handleManageCategories,
+                        child: const Text('Manage Categories'),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
