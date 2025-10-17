@@ -32,8 +32,16 @@ class _HoverableCueCardState extends State<HoverableCueCard> {
         onHover: (hovering) => setState(() => _isHovered = hovering),
         child: ListTile(
           contentPadding: const EdgeInsets.only(left: 16.0, right: 8.0),
-          title: Text(widget.cueCard.title ?? 'Untitled'),
-          subtitle: Text(widget.cueCard.description ?? 'No description'),
+          title: Text(
+            widget.cueCard.title ?? 'Untitled',
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+          subtitle: Text(
+            widget.cueCard.description ?? 'No description',
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
           leading: widget.cueCard.iconFilePath != null
               ? SizedBox(
                   width: 40,
