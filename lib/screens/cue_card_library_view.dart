@@ -17,7 +17,7 @@ class CueCardLibraryView extends StatefulWidget {
 
 class _CueCardLibraryViewState extends State<CueCardLibraryView> {
   final List<Tag> _selectedTags = [];
-
+  int _cueCardsPerPage = 1;
 
   Timer? _debounce;
 
@@ -53,12 +53,24 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
                 : Column(
                     children: [
                       Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(8.0),
-                          itemCount: filteredCueCards.length,
-                          itemBuilder: (context, index) {
-                            final cueCard = filteredCueCards[index];
-                            return HoverableCueCard(cueCard: cueCard);
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final availableHeight = constraints.maxHeight;
+                            _cueCardsPerPage = (availableHeight / 72.0).floor();
+                            if (_cueCardsPerPage < 1) _cueCardsPerPage = 1;
+
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              appState.setItemsPerPage(_cueCardsPerPage);
+                            });
+
+                            return ListView.builder(
+                              padding: const EdgeInsets.all(8.0),
+                              itemCount: filteredCueCards.length,
+                              itemBuilder: (context, index) {
+                                final cueCard = filteredCueCards[index];
+                                return HoverableCueCard(cueCard: cueCard);
+                              },
+                            );
                           },
                         ),
                       ),
@@ -79,20 +91,6 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
                               onPressed: appState.currentPage < appState.totalPages
                                   ? () => appState.goToPage(appState.currentPage + 1)
                                   : null,
-                            ),
-                            const SizedBox(width: 16),
-                            DropdownButton<int>(
-                              value: appState.pageSize,
-                              items: const [
-                                DropdownMenuItem(value: 5, child: Text('5 per page')),
-                                DropdownMenuItem(value: 10, child: Text('10 per page')),
-                                DropdownMenuItem(value: 20, child: Text('20 per page')),
-                              ],
-                              onChanged: (value) {
-                                if (value != null) {
-                                  appState.updateFilteredCueCards(size: value);
-                                }
-                              },
                             ),
                           ],
                         ),

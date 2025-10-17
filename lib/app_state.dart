@@ -82,11 +82,18 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void updateFilteredCueCards({List<Tag>? tags, String? text, int? size}) {
-    if (size != null) _pageSize = size;
+
+  void setItemsPerPage(int size) {
+    if (_pageSize == size) return;
+    _pageSize = size;
+    _currentPage = 1;
+    loadCueCards(page: _currentPage, size: _pageSize);
+  }
+
+  void updateFilteredCueCards({List<Tag>? tags, String? text}) {
     if (tags != null) searchSelectedTags = tags;
     if (text != null) searchText = text;
-    _currentPage = 1; // Reset to first page when page size changes
+    _currentPage = 1;
     loadCueCards(page: _currentPage, size: _pageSize);
   }
 }
