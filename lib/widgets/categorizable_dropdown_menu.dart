@@ -29,20 +29,46 @@ class _CategorizableDropdownMenuState<T extends Nameable> extends State<Categori
   @override
   void initState() {
     super.initState();
-    _focusNode.addListener(() {
-      if (!_focusNode.hasFocus) {
-        final name = _selectedName ?? '';
-        if (widget.controller.text != name) {
-          widget.controller.text = name;
-        }
-        _isFirstFocus = true;
-      } else {
-        widget.controller.selection = TextSelection(
-          baseOffset: 0,
-          extentOffset: widget.controller.text.length,
-        );
+    _focusNode.addListener(_handleFocusChange);
+    widget.controller.addListener(_handleControllerChange);
+  }
+
+  @override
+  void didUpdateWidget(covariant CategorizableDropdownMenu<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_handleControllerChange);
+      widget.controller.addListener(_handleControllerChange);
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    _focusNode.dispose();
+    widget.controller.removeListener(_handleControllerChange);
+    super.dispose();
+  }
+
+  void _handleFocusChange() {
+    if (!_focusNode.hasFocus) {
+      final name = _selectedName ?? '';
+      if (widget.controller.text != name) {
+        widget.controller.text = name;
       }
-    });
+      _isFirstFocus = true;
+    } else {
+      widget.controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: widget.controller.text.length,
+      );
+    }
+  }
+
+  void _handleControllerChange() {
+    if (widget.controller.text.isEmpty) {
+      _selectedName = null;
+    }
   }
   
 
