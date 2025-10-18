@@ -70,8 +70,11 @@ class AppState extends ChangeNotifier {
 
   Future<void> removeCueCard(int id) async {
     await _cueCardDatabase.deleteCueCard(id);
-    cueCards.removeWhere((card) => card.id == id);
+    
     await loadCueCards(page: _currentPage, size: _pageSize); // Reload paginated cards
+    if (selectedCard != null && selectedCard!.id == id) {
+      selectedCard = null;
+    }
     notifyListeners();
   }
 

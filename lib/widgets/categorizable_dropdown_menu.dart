@@ -1,65 +1,99 @@
-import 'package:dnd_cuecard_app/app_state.dart';
 import 'package:dnd_cuecard_app/interfaces/nameable.dart';
-import 'package:flutter/material.dart';
+import 'package:dnd_cuecard_app/widgets/autocomplete_options.dart';
+import 'package:dnd_cuecard_app/widgets/autocomplete.dart' hide OptionsViewOpenDirection;
+import 'package:flutter/material.dart' hide RawAutocomplete, AutocompleteOnSelected;
 
-class CategorizableDropdownMenu<T extends Nameable> extends StatelessWidget {
+class CategorizableDropdownMenu<T extends Nameable> extends StatefulWidget {
   const CategorizableDropdownMenu({
     super.key,
     required this.label,
     required this.controller,
     required this.values,
-    required this.selectedValue,
     required this.onValueChanged,
-    required this.createFunction,
-    required this.updateFunction,
-    required this.deleteFunction,
-    required this.refreshFunction,
-    required this.appState,
   });
 
   final String label;
   final TextEditingController controller;
   final List<T> values;
-  final T? selectedValue;
   final Function(T?) onValueChanged;
-  final Future<bool> Function(String, Color) createFunction;
-  final Future<bool> Function(int, String, Color) updateFunction;
-  final Function(int) deleteFunction;
-  final Function() refreshFunction;
-  final AppState appState;
+
+  @override
+  State<CategorizableDropdownMenu<T>> createState() => _CategorizableDropdownMenuState<T>();
+}
+
+class _CategorizableDropdownMenuState<T extends Nameable> extends State<CategorizableDropdownMenu<T>> {
+  String? _selectedName;
+  final FocusNode _focusNode = FocusNode();
+  bool _isFirstFocus = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus) {
+        final name = _selectedName ?? '';
+        if (widget.controller.text != name) {
+          widget.controller.text = name;
+        }
+        _isFirstFocus = true;
+      } else {
+        widget.controller.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: widget.controller.text.length,
+        );
+      }
+    });
+  }
+  
 
   @override
   Widget build(BuildContext context) {
-    void handleFocusChange(bool hasFocus) {
-      if (!hasFocus) {
-        final name = selectedValue?.name ?? '';
-        if (controller.text != name) {
-          controller.text = name;
-        }
-      }
+    void handleSelect(T val) {
+      widget.onValueChanged(val);
+      _selectedName = val.name;
+      _focusNode.unfocus();
     }
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Focus(
-          onFocusChange: handleFocusChange,
-          child: DropdownMenu<T>(
-            width: constraints.maxWidth,
-            label: Text(label),
-            controller: controller,
-            requestFocusOnTap: true,
-            enableFilter: true,
-            menuHeight: 200,
-            dropdownMenuEntries: values
-                .map(
-                  (T value) => DropdownMenuEntry<T>(
-                    value: value,
-                    label: value.name,
-                  ),
-                )
-                .toList(),
-            onSelected: onValueChanged
+    return RawAutocomplete<T>(
+      key: ObjectKey(widget.values),
+      textEditingController: widget.controller,
+      focusNode: _focusNode,
+      displayStringForOption: (option) => option.name,
+      onSelected: handleSelect,
+      optionsBuilder: (TextEditingValue textEditingValue) {
+        if (_isFirstFocus) {
+          _isFirstFocus = false;
+          return widget.values;
+        }
+        return widget.values.where((option) =>
+            option.name.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+      },
+      optionsViewBuilder: (BuildContext context, AutocompleteOnSelected<T> onSelected, Iterable<T> options) {
+        return AutocompleteOptions<T>(
+          displayStringForOption: (option) => option.name,
+          onSelected: onSelected,
+          options: options,
+          openDirection: OptionsViewOpenDirection.down,
+          optionsMaxHeight: 200,
+        );
+      },
+      fieldViewBuilder:
+          (context, textEditingController, textFocusNode, onFieldSubmitted) {
+        return TextField(
+          controller: textEditingController,
+          focusNode: textFocusNode,
+          decoration: InputDecoration(
+            labelText: widget.label,
+            border: OutlineInputBorder(),
           ),
+          onSubmitted: (String value) {
+            if (!widget.values.any((x) => x.name == value)) {
+              return;
+            }
+            
+            final val = widget.values.firstWhere(
+                (element) => element.name.toLowerCase() == value.toLowerCase());
+            handleSelect(val);
+          }
         );
       },
     );

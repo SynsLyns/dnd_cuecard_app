@@ -26,6 +26,7 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
   XFile? image;
   CardType? _currentSelectedCardType;
   Rarity? _currentSelectedRarity;
+  CueCard? _selectedCard;
 
   @override
   void dispose() {
@@ -38,20 +39,24 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
     super.didChangeDependencies();
     var appState = context.watch<AppState>();
     if (appState.selectedCard != null) {
-      CueCard cueCard = appState.selectedCard!;
-      _controllers.loadCard(cueCard, appState);
-      setState(() {
-        image = cueCard.iconFilePath != null
-            ? XFile(cueCard.iconFilePath!)
-            : null;
-        _currentSelectedCardType = appState.cardTypes.firstWhere(
-          (element) => element.id == cueCard.type,
-          orElse: () => CardType(id: -1, name: 'Unknown', color: Colors.white),
-        );
-        _currentSelectedRarity = appState.rarities.firstWhere(
-          (element) => element.id == cueCard.rarity,
-          orElse: () => Rarity(id: -1, name: 'Unknown', color: Colors.white),
-        );
+      _selectedCard = appState.selectedCard!;
+      _controllers.loadCard(_selectedCard!, appState);
+        setState(() {
+          image = _selectedCard!.iconFilePath != null
+              ? XFile(_selectedCard!.iconFilePath!)
+              : null;
+          _currentSelectedCardType = appState.cardTypes.firstWhere(
+            (element) => element.id == _selectedCard!.type,
+            orElse: () => CardType(id: -1, name: 'Unknown', color: Colors.white),
+          );
+          _currentSelectedRarity = appState.rarities.firstWhere(
+            (element) => element.id == _selectedCard!.rarity,
+            orElse: () => Rarity(id: -1, name: 'Unknown', color: Colors.white),
+          );
+        });
+    } else if (_selectedCard != null)  {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        clearCueCard();
       });
     }
   }
@@ -66,6 +71,7 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
       image = null;
       _currentSelectedCardType = null;
       _currentSelectedRarity = null;
+      _selectedCard = null;
     });
   }
 
@@ -73,8 +79,6 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
   Widget build(BuildContext context) {
     CardOptions options = CardOptions(
       controllers: _controllers,
-      currentSelectedCardType: _currentSelectedCardType,
-      currentSelectedRarity: _currentSelectedRarity,
       onCardTypeChanged: (value) {
         setState(() {
           _currentSelectedCardType = value;
@@ -121,21 +125,23 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
             padding: EdgeInsets.all(minConstraint * 0.04),
             child: Column(
               children: [
-                _buildCueCardView(minConstraint: minConstraint * 0.7),
+                _buildCueCardView(minConstraint: minConstraint * 0.66),
                 SizedBox(height: minConstraint * 0.02),
                 ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: minConstraint * 0.13),
+                  constraints: BoxConstraints(maxHeight: minConstraint * 0.11),
                   child: options
                 ),
                 SizedBox(height: minConstraint * 0.02),
                 ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: minConstraint * 0.13),
+                  constraints: BoxConstraints(maxHeight: minConstraint * 0.11),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      ElevatedButton(
-                        onPressed: handleSave,
-                        child: const Text('Save'),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: handleSave,
+                          child: const Text('Save'),
+                        ),
                       ),
                       const SizedBox(width: 16),
                       ElevatedButton(
@@ -159,24 +165,20 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
   }
 
   Widget _buildCueCardView({required double minConstraint}) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        return SizedBox(
-          width: minConstraint / 0.5625,
-          height: minConstraint,
-          child: CueCardView(
-            controllers: _controllers,
-            currentSelectedCardType: _currentSelectedCardType,
-            currentSelectedRarity: _currentSelectedRarity,
-            image: image,
-            onImageSelected: (XFile? image) {
-              setState(() {
-                this.image = image;
-              });
-            },
-          ),
-        );
-      },
+    return SizedBox(
+      width: minConstraint / 0.5625,
+      height: minConstraint,
+      child: CueCardView(
+        controllers: _controllers,
+        currentSelectedCardType: _currentSelectedCardType,
+        currentSelectedRarity: _currentSelectedRarity,
+        image: image,
+        onImageSelected: (XFile? image) {
+          setState(() {
+            this.image = image;
+          });
+        },
+      ),
     );
   }
 }
