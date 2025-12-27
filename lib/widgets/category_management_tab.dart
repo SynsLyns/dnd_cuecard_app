@@ -1,3 +1,4 @@
+import 'package:dnd_cuecard_app/interfaces/colorable.dart';
 import 'package:dnd_cuecard_app/interfaces/nameable.dart';
 import 'package:dnd_cuecard_app/models/card_type.dart';
 import 'package:dnd_cuecard_app/models/rarity.dart';
@@ -49,6 +50,17 @@ class CategoryManagementTab<T extends Nameable> extends StatelessWidget {
     ListTile buildListTile(BuildContext context, int index) {
       final T item = values[index];
       return ListTile(
+        leading: item is Colorable
+            ? Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: (item as Colorable).color,
+                  border: Border.all(color: Colors.black),
+                  borderRadius: BorderRadius.circular(4.0),
+                ),
+              )
+            : null,
         title: Text(item.name),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,

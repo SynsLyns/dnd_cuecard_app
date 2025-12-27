@@ -132,7 +132,6 @@ class _AutocompleteOptionsListState<T extends Object> extends State<_Autocomplet
                         Container(
                           width: 20,
                           height: 20,
-                          margin: const EdgeInsets.only(left: 8.0),
                           decoration: BoxDecoration(
                             color: color,
                             border: Border.all(color: Colors.black),
