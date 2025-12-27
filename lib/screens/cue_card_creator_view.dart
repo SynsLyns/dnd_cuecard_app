@@ -40,20 +40,22 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
     var appState = context.watch<AppState>();
     if (appState.selectedCard != null) {
       _selectedCard = appState.selectedCard!;
-      _controllers.loadCard(_selectedCard!, appState);
-        setState(() {
-          image = _selectedCard!.iconFilePath != null
-              ? XFile(_selectedCard!.iconFilePath!)
-              : null;
-          _currentSelectedCardType = appState.cardTypes.firstWhere(
-            (element) => element.id == _selectedCard!.type,
-            orElse: () => CardType(id: -1, name: 'Unknown', color: Colors.white),
-          );
-          _currentSelectedRarity = appState.rarities.firstWhere(
-            (element) => element.id == _selectedCard!.rarity,
-            orElse: () => Rarity(id: -1, name: 'Unknown', color: Colors.white),
-          );
-        });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _controllers.loadCard(_selectedCard!, appState);
+      });
+      setState(() {
+        image = _selectedCard!.iconFilePath != null
+            ? XFile(_selectedCard!.iconFilePath!)
+            : null;
+        _currentSelectedCardType = appState.cardTypes.firstWhere(
+          (element) => element.id == _selectedCard!.type,
+          orElse: () => CardType(id: -1, name: 'Unknown', color: Colors.white),
+        );
+        _currentSelectedRarity = appState.rarities.firstWhere(
+          (element) => element.id == _selectedCard!.rarity,
+          orElse: () => Rarity(id: -1, name: 'Unknown', color: Colors.white),
+        );
+      });
     } else if (_selectedCard != null)  {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         clearCueCard();

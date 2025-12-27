@@ -1,7 +1,7 @@
 import 'package:dnd_cuecard_app/interfaces/nameable.dart';
-import 'package:dnd_cuecard_app/widgets/autocomplete_options.dart';
-import 'package:dnd_cuecard_app/widgets/autocomplete.dart' hide OptionsViewOpenDirection;
-import 'package:flutter/material.dart' hide RawAutocomplete, AutocompleteOnSelected;
+import 'package:dnd_cuecard_app/widgets/autocomplete/autocomplete_options.dart';
+import 'package:dnd_cuecard_app/widgets/autocomplete/autocomplete.dart';
+import 'package:flutter/material.dart' hide RawAutocomplete, AutocompleteOnSelected, OptionsViewOpenDirection, AutocompleteHighlightedOption;
 
 class CategorizableDropdownMenu<T extends Nameable> extends StatefulWidget {
   const CategorizableDropdownMenu({
@@ -10,12 +10,14 @@ class CategorizableDropdownMenu<T extends Nameable> extends StatefulWidget {
     required this.controller,
     required this.values,
     required this.onValueChanged,
+    this.getColor,
   });
 
   final String label;
   final TextEditingController controller;
   final List<T> values;
   final Function(T?) onValueChanged;
+  final Color? Function(T)? getColor;
 
   @override
   State<CategorizableDropdownMenu<T>> createState() => _CategorizableDropdownMenuState<T>();
@@ -70,7 +72,6 @@ class _CategorizableDropdownMenuState<T extends Nameable> extends State<Categori
       _selectedName = null;
     }
   }
-  
 
   @override
   Widget build(BuildContext context) {
@@ -100,26 +101,21 @@ class _CategorizableDropdownMenuState<T extends Nameable> extends State<Categori
           options: options,
           openDirection: OptionsViewOpenDirection.down,
           optionsMaxHeight: 200,
+          getColor: widget.getColor,
         );
       },
       fieldViewBuilder:
           (context, textEditingController, textFocusNode, onFieldSubmitted) {
-        return TextField(
+        return TextFormField(
           controller: textEditingController,
           focusNode: textFocusNode,
           decoration: InputDecoration(
             labelText: widget.label,
             border: OutlineInputBorder(),
           ),
-          onSubmitted: (String value) {
-            if (!widget.values.any((x) => x.name == value)) {
-              return;
-            }
-            
-            final val = widget.values.firstWhere(
-                (element) => element.name.toLowerCase() == value.toLowerCase());
-            handleSelect(val);
-          }
+          onFieldSubmitted: (String value) {
+            onFieldSubmitted();
+          },
         );
       },
     );

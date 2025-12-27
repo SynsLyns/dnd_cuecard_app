@@ -1,8 +1,8 @@
 import 'package:dnd_cuecard_app/models/tag.dart';
-import 'package:dnd_cuecard_app/widgets/autocomplete_options.dart';
+import 'package:dnd_cuecard_app/widgets/autocomplete/autocomplete_options.dart';
 import 'package:dnd_cuecard_app/widgets/tag/tag_chip.dart';
-import 'package:dnd_cuecard_app/widgets/autocomplete.dart' hide OptionsViewOpenDirection;
-import 'package:flutter/material.dart' hide RawAutocomplete, AutocompleteOnSelected;
+import 'package:dnd_cuecard_app/widgets/autocomplete/autocomplete.dart';
+import 'package:flutter/material.dart' hide RawAutocomplete, AutocompleteOnSelected, OptionsViewOpenDirection;
 
 class TagInputField extends StatefulWidget {
   const TagInputField({

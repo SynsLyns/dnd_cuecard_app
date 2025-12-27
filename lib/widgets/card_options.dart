@@ -31,6 +31,7 @@ class CardOptions extends StatelessWidget {
       controller: _controllers.cardTypeController,
       values: appState.cardTypes,
       onValueChanged: _onCardTypeChanged,
+      getColor: (item) => item.color,
     );
 
     CategorizableDropdownMenu<Rarity> rarityDropdown =
@@ -39,6 +40,7 @@ class CardOptions extends StatelessWidget {
       controller: _controllers.rarityController,
       values: appState.rarities,
       onValueChanged: _onRarityChanged,
+      getColor: (item) => item.color,
     );
     
     return Row(
