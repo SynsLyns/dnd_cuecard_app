@@ -5,6 +5,7 @@ import 'package:dnd_cuecard_app/logic/cue_card_database.dart';
 import 'package:dnd_cuecard_app/models/card_type.dart';
 import 'package:dnd_cuecard_app/models/cue_card.dart';
 import 'package:dnd_cuecard_app/models/rarity.dart';
+import 'package:dnd_cuecard_app/models/relationship.dart';
 import 'package:dnd_cuecard_app/models/tag.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:crypto/crypto.dart';
@@ -163,5 +164,34 @@ class CueCardCreator {
       }
     }
     return iconPaths;
+  }
+
+  static Future<void> createRelationship(int parent1Id, int parent2Id, int childId) async {
+    if (parent1Id == parent2Id) throw Exception('Parents must be different');
+    if (parent1Id == childId || parent2Id == childId) throw Exception('Child cannot be a parent');
+
+    // Check if cards exist
+    final parent1 = await _cueCardDatabase.getCueCard(parent1Id);
+    final parent2 = await _cueCardDatabase.getCueCard(parent2Id);
+    final child = await _cueCardDatabase.getCueCard(childId);
+    if (parent1 == null || parent2 == null || child == null) throw Exception('One or more cards do not exist');
+
+    // Check if relationship already exists
+    final existing = await _cueCardDatabase.getRelationshipByParents(parent1Id, parent2Id);
+    if (existing != null) throw Exception('Relationship already exists for these parents');
+
+    final existingChild = await _cueCardDatabase.getRelationshipByChild(childId);
+    if (existingChild != null) throw Exception('Child already has parents');
+
+    final relationship = Relationship(
+      parent1Id: parent1Id < parent2Id ? parent1Id : parent2Id,
+      parent2Id: parent1Id < parent2Id ? parent2Id : parent1Id,
+      childId: childId,
+    );
+    await _cueCardDatabase.insertRelationship(relationship);
+  }
+
+  static Future<void> deleteRelationship(int parent1Id, int parent2Id) async {
+    await _cueCardDatabase.deleteRelationship(parent1Id, parent2Id);
   }
 }

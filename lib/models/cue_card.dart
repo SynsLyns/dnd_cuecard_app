@@ -1,4 +1,5 @@
 import 'package:dnd_cuecard_app/models/tag.dart';
+import 'relationship.dart';
 
 class CueCard {
   final int? id;
@@ -13,6 +14,7 @@ class CueCard {
   final int? type;
   final int? rarity;
   final String? iconFilePath;
+  final Relationship? relationship;
 
   CueCard({
     this.id,
@@ -27,6 +29,7 @@ class CueCard {
     required this.type,
     required this.rarity,
     this.iconFilePath,
+    this.relationship,
   });
 
   Map<String, Object?> toMapForInsert() {
@@ -58,11 +61,12 @@ class CueCard {
       type: map['type'] as int?,
       rarity: map['rarity'] as int?,
       iconFilePath: map['icon'] as String?,
+      relationship: null,
     );
   }
 
   @override
   String toString() {
-    return 'CueCard{id: $id, title: $title, type: $type, rarity: $rarity, requirements: $requirements, description: $description, box1: $box1, box2: $box2, notes: $notes, tags: $tags, dateCreated: $dateCreated}';
+    return 'CueCard{id: $id, title: $title, type: $type, rarity: $rarity, requirements: $requirements, description: $description, box1: $box1, box2: $box2, notes: $notes, tags: $tags, dateCreated: $dateCreated, relationship: $relationship}';
   }
 }

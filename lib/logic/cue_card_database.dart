@@ -9,6 +9,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../models/card_type.dart';
 import '../models/cue_card.dart';
 import '../models/rarity.dart';
+import '../models/relationship.dart';
 import '../models/tag.dart';
 
 class CueCardDatabase {
@@ -38,14 +39,34 @@ class CueCardDatabase {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onConfigure: _onConfigure,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
   Future<void> _onConfigure(Database db) {
     return db.execute('PRAGMA foreign_keys = ON');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE cue_card_relationships (
+          parent1_id INTEGER NOT NULL,
+          parent2_id INTEGER NOT NULL,
+          child_id INTEGER NOT NULL,
+          PRIMARY KEY (parent1_id, parent2_id),
+          UNIQUE (child_id),
+          FOREIGN KEY (parent1_id) REFERENCES cue_cards(id) ON DELETE CASCADE,
+          FOREIGN KEY (parent2_id) REFERENCES cue_cards(id) ON DELETE CASCADE,
+          FOREIGN KEY (child_id) REFERENCES cue_cards(id) ON DELETE CASCADE,
+          CHECK (parent1_id != parent2_id),
+          CHECK (parent1_id < parent2_id)
+        );
+      ''');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) {
@@ -88,6 +109,19 @@ class CueCardDatabase {
         name TEXT NOT NULL UNIQUE,
         color INTEGER NOT NULL
       );
+
+      CREATE TABLE cue_card_relationships (
+        parent1_id INTEGER NOT NULL,
+        parent2_id INTEGER NOT NULL,
+        child_id INTEGER NOT NULL,
+        PRIMARY KEY (parent1_id, parent2_id),
+        UNIQUE (child_id),
+        FOREIGN KEY (parent1_id) REFERENCES cue_cards(id) ON DELETE CASCADE,
+        FOREIGN KEY (parent2_id) REFERENCES cue_cards(id) ON DELETE CASCADE,
+        FOREIGN KEY (child_id) REFERENCES cue_cards(id) ON DELETE CASCADE,
+        CHECK (parent1_id != parent2_id),
+        CHECK (parent1_id < parent2_id)
+      );
     ''');
   }
 
@@ -101,9 +135,10 @@ class CueCardDatabase {
     return id;
   }
 
-  Future<CueCard> getCueCard(int id) async {
+  Future<CueCard?> getCueCard(int id) async {
     final db = await database;
     final List<Map<String, Object?>> cueCard = await db.query('cue_cards', where: 'id = ?', whereArgs: [id]);
+    if (cueCard.isEmpty) return null;
     final List<Tag> tags = await getTagsForCueCard(id);
     return CueCard.fromMap(cueCard[0], tags);
   }
@@ -412,5 +447,55 @@ class CueCardDatabase {
     } else {
       return await db.insert('tags', {'name': tagName});
     }
+  }
+
+  Future<int> insertRelationship(Relationship relationship) async {
+    final db = await database;
+    return await db.insert('cue_card_relationships', relationship.toMap());
+  }
+
+  Future<Relationship?> getRelationshipByParents(int parent1Id, int parent2Id) async {
+    final db = await database;
+    final int p1 = parent1Id < parent2Id ? parent1Id : parent2Id;
+    final int p2 = parent1Id < parent2Id ? parent2Id : parent1Id;
+    final List<Map<String, Object?>> maps = await db.query(
+      'cue_card_relationships',
+      where: 'parent1_id = ? AND parent2_id = ?',
+      whereArgs: [p1, p2],
+    );
+    if (maps.isNotEmpty) {
+      return Relationship.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<Relationship?> getRelationshipByChild(int childId) async {
+    final db = await database;
+    final List<Map<String, Object?>> maps = await db.query(
+      'cue_card_relationships',
+      where: 'child_id = ?',
+      whereArgs: [childId],
+    );
+    if (maps.isNotEmpty) {
+      return Relationship.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<int> deleteRelationship(int parent1Id, int parent2Id) async {
+    final db = await database;
+    final int p1 = parent1Id < parent2Id ? parent1Id : parent2Id;
+    final int p2 = parent1Id < parent2Id ? parent2Id : parent1Id;
+    return await db.delete(
+      'cue_card_relationships',
+      where: 'parent1_id = ? AND parent2_id = ?',
+      whereArgs: [p1, p2],
+    );
+  }
+
+  Future<List<Relationship>> getAllRelationships() async {
+    final db = await database;
+    final List<Map<String, Object?>> maps = await db.query('cue_card_relationships');
+    return maps.map((map) => Relationship.fromMap(map)).toList();
   }
 }

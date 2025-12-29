@@ -2,6 +2,7 @@ import 'package:dnd_cuecard_app/logic/cue_card_database.dart';
 import 'package:dnd_cuecard_app/models/card_type.dart';
 import 'package:dnd_cuecard_app/models/cue_card.dart';
 import 'package:dnd_cuecard_app/models/rarity.dart';
+import 'package:dnd_cuecard_app/models/relationship.dart';
 import 'package:dnd_cuecard_app/models/tag.dart';
 import 'package:flutter/material.dart';
 
@@ -12,6 +13,7 @@ class AppState extends ChangeNotifier {
   List<Rarity> rarities = [];
   List<CardType> cardTypes = [];
   List<Tag> tags = [];
+  List<Relationship> relationships = [];
 
   CueCard? selectedCard;
 
@@ -35,6 +37,7 @@ class AppState extends ChangeNotifier {
       loadCardTypes(),
       loadCueCards(),
       loadTags(),
+      loadRelationships(),
     ]);
   }
 
@@ -63,6 +66,11 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loadRelationships() async {
+    relationships = await _cueCardDatabase.getAllRelationships();
+    notifyListeners();
+  }
+
   void selectCard(CueCard? card) {
     selectedCard = card;
     notifyListeners();
@@ -72,6 +80,7 @@ class AppState extends ChangeNotifier {
     await _cueCardDatabase.deleteCueCard(id);
     
     await loadCueCards(page: _currentPage, size: _pageSize); // Reload paginated cards
+    await loadRelationships(); // Reload relationships after delete
     if (selectedCard != null && selectedCard!.id == id) {
       selectedCard = null;
     }
@@ -98,5 +107,19 @@ class AppState extends ChangeNotifier {
     if (text != null) searchText = text;
     _currentPage = 1;
     loadCueCards(page: _currentPage, size: _pageSize);
+  }
+
+  List<CueCard> getParents(int childId) {
+    final rel = relationships.where((r) => r.childId == childId).firstOrNull;
+    if (rel == null) return [];
+    final parent1 = cueCards.where((c) => c.id == rel.parent1Id).firstOrNull;
+    final parent2 = cueCards.where((c) => c.id == rel.parent2Id).firstOrNull;
+    return [if (parent1 != null) parent1, if (parent2 != null) parent2];
+  }
+
+  CueCard? getChild(int parent1Id, int parent2Id) {
+    final rel = relationships.where((r) => (r.parent1Id == parent1Id && r.parent2Id == parent2Id) || (r.parent1Id == parent2Id && r.parent2Id == parent1Id)).firstOrNull;
+    if (rel == null) return null;
+    return cueCards.where((c) => c.id == rel.childId).firstOrNull;
   }
 }
