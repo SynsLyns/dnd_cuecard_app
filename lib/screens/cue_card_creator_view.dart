@@ -40,9 +40,7 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
     var appState = context.watch<AppState>();
     if (appState.selectedCard != null) {
       _selectedCard = appState.selectedCard!;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _controllers.loadCard(_selectedCard!, appState);
-      });
+      _controllers.loadCard(_selectedCard!, appState);
       setState(() {
         image = _selectedCard!.iconFilePath != null
             ? XFile(_selectedCard!.iconFilePath!)

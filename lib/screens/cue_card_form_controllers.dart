@@ -47,9 +47,12 @@ class CueCardFormControllers {
     final rarity = rarities
       .where((r) => r.id == card.rarity)
       .firstOrNull;
-    
-    cardTypeController.text = cardType?.name ?? '';    
-    rarityController.text = rarity?.name ?? '';
+
+    // due to autocomplete text field behavior, we need to set the text after build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      cardTypeController.text = cardType?.name ?? '';    
+      rarityController.text = rarity?.name ?? '';
+    });
   }
 
   Future<void> saveCueCard(AppState appState, XFile? image) async {
