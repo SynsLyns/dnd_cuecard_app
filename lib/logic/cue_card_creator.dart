@@ -114,7 +114,6 @@ class CueCardCreator {
     await _cueCardDatabase.deleteTag(id);
   }
 
-
   static Future<String?> getIconFilePath(String? iconFilePath) async {
     if (iconFilePath == null) {
       return null;
@@ -166,22 +165,22 @@ class CueCardCreator {
     return iconPaths;
   }
 
-  static Future<void> createRelationship(int parent1Id, int parent2Id, int childId) async {
-    if (parent1Id == parent2Id) throw Exception('Parents must be different');
-    if (parent1Id == childId || parent2Id == childId) throw Exception('Child cannot be a parent');
+  static Future<String?> createRelationship(int parent1Id, int parent2Id, int childId) async {
+    if (parent1Id == parent2Id) return 'Parents must be different';
+    if (parent1Id == childId || parent2Id == childId) return 'Child cannot be a parent';
 
     // Check if cards exist
     final parent1 = await _cueCardDatabase.getCueCard(parent1Id);
     final parent2 = await _cueCardDatabase.getCueCard(parent2Id);
     final child = await _cueCardDatabase.getCueCard(childId);
-    if (parent1 == null || parent2 == null || child == null) throw Exception('One or more cards do not exist');
+    if (parent1 == null || parent2 == null || child == null) return 'One or more cards do not exist';
 
     // Check if relationship already exists
     final existing = await _cueCardDatabase.getRelationshipByParents(parent1Id, parent2Id);
-    if (existing != null) throw Exception('Relationship already exists for these parents');
+    if (existing != null) return 'Relationship already exists for these parents';
 
     final existingChild = await _cueCardDatabase.getRelationshipByChild(childId);
-    if (existingChild != null) throw Exception('Child already has parents');
+    if (existingChild != null) return 'Child already has parents';
 
     final relationship = Relationship(
       parent1Id: parent1Id < parent2Id ? parent1Id : parent2Id,
@@ -189,9 +188,24 @@ class CueCardCreator {
       childId: childId,
     );
     await _cueCardDatabase.insertRelationship(relationship);
+    return null; // Success - no error
   }
 
   static Future<void> deleteRelationship(int parent1Id, int parent2Id) async {
     await _cueCardDatabase.deleteRelationship(parent1Id, parent2Id);
+  }
+
+  static Future<List<CueCard>> getParents(int childId) async {
+    final rel = await _cueCardDatabase.getRelationshipByChild(childId);
+    if (rel == null) return [];
+    final parent1 = await _cueCardDatabase.getCueCard(rel.parent1Id);
+    final parent2 = await _cueCardDatabase.getCueCard(rel.parent2Id);
+    return [if (parent1 != null) parent1, if (parent2 != null) parent2];
+  }
+
+  static Future<CueCard?> getChild(int parent1Id, int parent2Id) async {
+    final rel = await _cueCardDatabase.getRelationshipByParents(parent1Id, parent2Id);
+    if (rel == null) return null;
+    return await _cueCardDatabase.getCueCard(rel.childId);
   }
 }

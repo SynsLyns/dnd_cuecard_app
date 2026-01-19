@@ -13,6 +13,7 @@ class CardOptions extends StatelessWidget {
     required CueCardFormControllers controllers,
     required Function(CardType?) onCardTypeChanged,
     required Function(Rarity?) onRarityChanged,
+    this.readOnly = false,
   })  : _controllers = controllers,
         _onCardTypeChanged = onCardTypeChanged,
         _onRarityChanged = onRarityChanged;
@@ -20,6 +21,7 @@ class CardOptions extends StatelessWidget {
   final CueCardFormControllers _controllers;
   final Function(CardType?) _onCardTypeChanged;
   final Function(Rarity?) _onRarityChanged;
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +34,7 @@ class CardOptions extends StatelessWidget {
       values: appState.cardTypes,
       onValueChanged: _onCardTypeChanged,
       getColor: (item) => item.color,
+      readOnly: readOnly,
     );
 
     CategorizableDropdownMenu<Rarity> rarityDropdown =
@@ -41,6 +44,7 @@ class CardOptions extends StatelessWidget {
       values: appState.rarities,
       onValueChanged: _onRarityChanged,
       getColor: (item) => item.color,
+      readOnly: readOnly,
     );
     
     return Row(
@@ -63,6 +67,7 @@ class CardOptions extends StatelessWidget {
           child: TagInputField(
             selectedTags: _controllers.tags,
             suggestions: appState.tags,
+            readOnly: readOnly,
           )
         )
       ],

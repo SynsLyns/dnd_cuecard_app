@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 
 class TagChip extends StatefulWidget {
   final String tag;
-  final VoidCallback onRemove;
+  final VoidCallback? onRemove;
 
   const TagChip({
     super.key,
     required this.tag,
-    required this.onRemove,
+    this.onRemove,
   });
 
   @override
@@ -41,11 +41,11 @@ class _TagChipState extends State<TagChip> {
             AnimatedSize(
               duration: const Duration(milliseconds: 100),
               child: TweenAnimationBuilder<double>(
-                tween: Tween<double>(begin: 0, end: isHovered ? 1 : 0),
+                tween: Tween<double>(begin: 0, end: (isHovered && widget.onRemove != null) ? 1 : 0),
                 duration: const Duration(milliseconds: 100),
                 builder: (context, width, child) {
                   bool showIcon = width >= 1;
-                  if (isHovered) {
+                  if (isHovered && widget.onRemove != null) {
                     return Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

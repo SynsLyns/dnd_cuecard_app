@@ -24,6 +24,13 @@ class AppState extends ChangeNotifier {
   String searchText = '';
   List<Tag> searchSelectedTags = [];
 
+  bool _isRelationshipMode = false;
+  bool get isRelationshipMode => _isRelationshipMode;
+  set isRelationshipMode(bool value) {
+    _isRelationshipMode = value;
+    notifyListeners();
+  }
+
   int get currentPage => _currentPage;
   int get pageSize => _pageSize;
   int get totalCueCardCount => _totalCueCardCount;
@@ -107,19 +114,5 @@ class AppState extends ChangeNotifier {
     if (text != null) searchText = text;
     _currentPage = 1;
     loadCueCards(page: _currentPage, size: _pageSize);
-  }
-
-  List<CueCard> getParents(int childId) {
-    final rel = relationships.where((r) => r.childId == childId).firstOrNull;
-    if (rel == null) return [];
-    final parent1 = cueCards.where((c) => c.id == rel.parent1Id).firstOrNull;
-    final parent2 = cueCards.where((c) => c.id == rel.parent2Id).firstOrNull;
-    return [if (parent1 != null) parent1, if (parent2 != null) parent2];
-  }
-
-  CueCard? getChild(int parent1Id, int parent2Id) {
-    final rel = relationships.where((r) => (r.parent1Id == parent1Id && r.parent2Id == parent2Id) || (r.parent1Id == parent2Id && r.parent2Id == parent1Id)).firstOrNull;
-    if (rel == null) return null;
-    return cueCards.where((c) => c.id == rel.childId).firstOrNull;
   }
 }

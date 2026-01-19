@@ -9,11 +9,13 @@ class TagInputField extends StatefulWidget {
     super.key,
     required this.suggestions,
     required this.selectedTags,
+    this.readOnly = false,
   });
 
   
   final List<Tag> suggestions;
   final List<Tag> selectedTags;
+  final bool readOnly;
 
   @override
   State<TagInputField> createState() => _TagInputFieldState();
@@ -38,20 +40,28 @@ class _TagInputFieldState extends State<TagInputField> {
 
   Widget _buildTagList() {
     return widget.selectedTags.isEmpty ? const SizedBox(height: 32) :
-      Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: widget.selectedTags.map((tag) {
-          void removeTag(Tag tag) {
-            setState(() {
-              widget.selectedTags.remove(tag);
-            });
-          }
-          return TagChip(
-            tag: tag.name,
-            onRemove: () => removeTag(tag),
-          );
-        }).toList(),
+      Row(
+        children: [
+          if (widget.readOnly)
+            const Text('Tags:', style: TextStyle(fontWeight: FontWeight.bold)),
+          if (widget.readOnly)
+            const SizedBox(width: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: widget.selectedTags.map((tag) {
+              void removeTag(Tag tag) {
+                setState(() {
+                  widget.selectedTags.remove(tag);
+                });
+              }
+              return TagChip(
+                tag: tag.name,
+                onRemove: widget.readOnly ? null : () => removeTag(tag),
+              );
+            }).toList(),
+          ),
+        ],
       );
   }
 
@@ -80,52 +90,55 @@ class _TagInputFieldState extends State<TagInputField> {
       });
     }
 
-    return RawAutocomplete<Tag>(
-      key: ValueKey(widget.suggestions.hashCode),
-      textEditingController: _controller,
-      focusNode: _focusNode,
-      displayStringForOption: (option) => option.name,
-      onSelected: addTag,
-      optionsBuilder: (TextEditingValue textEditingValue) {
-        if (_isFirstFocus) {
-          _isFirstFocus = false;
+    return widget.readOnly ?
+      const SizedBox.shrink()
+    :
+      RawAutocomplete<Tag>(
+        key: ValueKey(widget.suggestions.hashCode),
+        textEditingController: _controller,
+        focusNode: _focusNode,
+        displayStringForOption: (option) => option.name,
+        onSelected: addTag,
+        optionsBuilder: (TextEditingValue textEditingValue) {
+          if (_isFirstFocus) {
+            _isFirstFocus = false;
+            return widget.suggestions.where((option) =>
+              !widget.selectedTags.any((t) => t.name == option.name));
+          }
           return widget.suggestions.where((option) =>
-            !widget.selectedTags.any((t) => t.name == option.name));
-        }
-        return widget.suggestions.where((option) =>
-            !widget.selectedTags.any((t) => t.name == option.name) &&
-            (textEditingValue.text.isEmpty ||
-                option.name.toLowerCase().contains(textEditingValue.text.toLowerCase())));
-      },
-      optionsViewBuilder: (BuildContext context, AutocompleteOnSelected<Tag> onSelected, Iterable<Tag> options) {
-        return AutocompleteOptions<Tag>(
-          displayStringForOption: (option) => option.name,
-          onSelected: onSelected,
-          options: options,
-          openDirection: OptionsViewOpenDirection.down,
-          optionsMaxHeight: 200,
-        );
-      },
-      fieldViewBuilder:
-          (context, textEditingController, textFocusNode, onFieldSubmitted) {
-        return TextField(
-          controller: textEditingController,
-          focusNode: textFocusNode,
-          decoration: InputDecoration(
-            labelText: 'Add a tag',
-            border: OutlineInputBorder(),
-          ),
+              !widget.selectedTags.any((t) => t.name == option.name) &&
+              (textEditingValue.text.isEmpty ||
+                  option.name.toLowerCase().contains(textEditingValue.text.toLowerCase())));
+        },
+        optionsViewBuilder: (BuildContext context, AutocompleteOnSelected<Tag> onSelected, Iterable<Tag> options) {
+          return AutocompleteOptions<Tag>(
+            displayStringForOption: (option) => option.name,
+            onSelected: onSelected,
+            options: options,
+            openDirection: OptionsViewOpenDirection.down,
+            optionsMaxHeight: 200,
+          );
+        },
+        fieldViewBuilder:
+            (context, textEditingController, textFocusNode, onFieldSubmitted) {
+          return TextField(
+            controller: textEditingController,
+            focusNode: textFocusNode,
+            decoration: InputDecoration(
+              labelText: 'Add a tag',
+              border: OutlineInputBorder(),
+            ),
           onSubmitted: (String value) {
-            final tag = widget.suggestions.firstWhere(
-                (element) => element.name.toLowerCase() == value.toLowerCase(),
-                orElse: () => Tag(name: ''));
-            if (tag.name.isNotEmpty) {
-              addTag(tag);
-            }
-          },
-        );
-      },
-    );
+              final tag = widget.suggestions.firstWhere(
+                  (element) => element.name.toLowerCase() == value.toLowerCase(),
+                  orElse: () => Tag(name: ''));
+              if (tag.name.isNotEmpty) {
+                addTag(tag);
+              }
+            },
+          );
+        },
+      );
   }
 }
 

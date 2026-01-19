@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dnd_cuecard_app/app_state.dart';
 import 'package:dnd_cuecard_app/models/cue_card.dart';
@@ -45,58 +46,108 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
           ),
           Expanded(
             child: filteredCueCards.isEmpty
-                ? Center(
-                    child: Text(
-                      'No matching cue cards found',
-                    ),
-                  )
-                : Column(
-                    children: [
-                      Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final availableHeight = constraints.maxHeight;
-                            _cueCardsPerPage = (availableHeight / 72.0).floor();
-                            if (_cueCardsPerPage < 1) _cueCardsPerPage = 1;
+                ? _buildEmptyState()
+                : _buildCardListWithPagination(appState, filteredCueCards),
+          ),
+        ],
+      ),
+    );
+  }
 
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              appState.setItemsPerPage(_cueCardsPerPage);
-                            });
+  Widget _buildEmptyState() {
+    return const Center(
+      child: Text('No matching cue cards found'),
+    );
+  }
 
-                            return ListView.builder(
-                              padding: const EdgeInsets.all(8.0),
-                              itemCount: filteredCueCards.length,
-                              itemBuilder: (context, index) {
-                                final cueCard = filteredCueCards[index];
-                                return HoverableCueCard(cueCard: cueCard);
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back),
-                              onPressed: appState.currentPage > 1
-                                  ? () => appState.goToPage(appState.currentPage - 1)
-                                  : null,
-                            ),
-                            Text('Page ${appState.currentPage} of ${appState.totalPages}'),
-                            IconButton(
-                              icon: const Icon(Icons.arrow_forward),
-                              onPressed: appState.currentPage < appState.totalPages
-                                  ? () => appState.goToPage(appState.currentPage + 1)
-                                  : null,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+  Widget _buildCardListWithPagination(AppState appState, List<CueCard> filteredCueCards) {
+    return Column(
+      children: [
+        Expanded(
+          child: _buildCardList(appState, filteredCueCards),
+        ),
+        _buildPaginationControls(appState),
+      ],
+    );
+  }
+
+  Widget _buildCardList(AppState appState, List<CueCard> filteredCueCards) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableHeight = constraints.maxHeight;
+        _cueCardsPerPage = (availableHeight / 72.0).floor();
+        if (_cueCardsPerPage < 1) _cueCardsPerPage = 1;
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          appState.setItemsPerPage(_cueCardsPerPage);
+        });
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(8.0),
+          itemCount: filteredCueCards.length,
+          itemBuilder: (context, index) {
+            final cueCard = filteredCueCards[index];
+            return _buildCardItem(cueCard, appState);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildCardItem(CueCard cueCard, AppState appState) {
+    final cardWidget = HoverableCueCard(cueCard: cueCard);
+    
+    if (appState.isRelationshipMode) {
+      return Draggable<CueCard>(
+        data: cueCard,
+        feedback: _buildDraggableFeedback(cueCard),
+        child: cardWidget,
+      );
+    }
+    return cardWidget;
+  }
+
+  Widget _buildDraggableFeedback(CueCard cueCard) {
+    return Material(
+      elevation: 6,
+      child: Container(
+        width: 200,
+        padding: const EdgeInsets.all(8),
+        color: Colors.white,
+        child: Row(
+          children: [
+            if (cueCard.iconFilePath != null)
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: Image.file(File(cueCard.iconFilePath!), fit: BoxFit.cover),
+              ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(cueCard.title ?? 'Untitled')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaginationControls(AppState appState) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: appState.currentPage > 1
+                ? () => appState.goToPage(appState.currentPage - 1)
+                : null,
+          ),
+          Text('Page ${appState.currentPage} of ${appState.totalPages}'),
+          IconButton(
+            icon: const Icon(Icons.arrow_forward),
+            onPressed: appState.currentPage < appState.totalPages
+                ? () => appState.goToPage(appState.currentPage + 1)
+                : null,
           ),
         ],
       ),

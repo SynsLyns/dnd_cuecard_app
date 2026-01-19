@@ -1,6 +1,7 @@
 import 'package:dnd_cuecard_app/interfaces/nameable.dart';
 import 'package:dnd_cuecard_app/widgets/autocomplete/autocomplete_options.dart';
 import 'package:dnd_cuecard_app/widgets/autocomplete/autocomplete.dart';
+import 'package:dnd_cuecard_app/widgets/labeled_value.dart';
 import 'package:flutter/material.dart' hide RawAutocomplete, AutocompleteOnSelected, OptionsViewOpenDirection, AutocompleteHighlightedOption;
 
 class CategorizableDropdownMenu<T extends Nameable> extends StatefulWidget {
@@ -11,6 +12,7 @@ class CategorizableDropdownMenu<T extends Nameable> extends StatefulWidget {
     required this.values,
     required this.onValueChanged,
     this.getColor,
+    this.readOnly = false,
   });
 
   final String label;
@@ -18,6 +20,7 @@ class CategorizableDropdownMenu<T extends Nameable> extends StatefulWidget {
   final List<T> values;
   final Function(T?) onValueChanged;
   final Color? Function(T)? getColor;
+  final bool readOnly;
 
   @override
   State<CategorizableDropdownMenu<T>> createState() => _CategorizableDropdownMenuState<T>();
@@ -68,24 +71,37 @@ class _CategorizableDropdownMenuState<T extends Nameable> extends State<Categori
   }
 
   void _handleControllerChange() {
-    if (widget.controller.text.isEmpty) {
-      _selectedName = null;
-    }
+    setState(() {
+      if (widget.controller.text.isEmpty) {
+        _selectedName = null;
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    return widget.readOnly
+        ? _buildViewMode()
+        : _buildEditMode();
+  }
+
+  Widget _buildViewMode() {
+    return LabeledValue(label: widget.label, value: widget.controller.text);
+  }
+
+  Widget _buildEditMode() {
     void handleSelect(T val) {
       widget.onValueChanged(val);
       _selectedName = val.name;
       _focusNode.unfocus();
     }
+
     return RawAutocomplete<T>(
       key: ObjectKey(widget.values),
       textEditingController: widget.controller,
       focusNode: _focusNode,
       displayStringForOption: (option) => option.name,
-      onSelected: handleSelect,
+      onSelected: widget.readOnly ? null : handleSelect,
       optionsBuilder: (TextEditingValue textEditingValue) {
         if (_isFirstFocus) {
           _isFirstFocus = false;

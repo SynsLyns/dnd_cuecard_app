@@ -17,6 +17,7 @@ class CueCardView extends StatefulWidget {
     required this.currentSelectedRarity,
     required this.image,
     required this.onImageSelected,
+    this.readOnly = false,
   });
 
   final CueCardFormControllers controllers;
@@ -24,6 +25,7 @@ class CueCardView extends StatefulWidget {
   final Rarity? currentSelectedRarity;
   final XFile? image;
   final void Function(XFile?) onImageSelected;
+  final bool readOnly;
 
   @override
   State<CueCardView> createState() => _CueCardViewState();
@@ -49,6 +51,7 @@ class _CueCardViewState extends State<CueCardView> {
               sectionName: 'Requirements',
               flex: 1,
               controller: widget.controllers.requirementsController,
+              readOnly: widget.readOnly,
             ),
           ],
         ),
@@ -72,7 +75,7 @@ class _CueCardViewState extends State<CueCardView> {
                 )
               : null,
         ),
-        child: IconButton(
+        child: widget.readOnly ? null : IconButton(
           onPressed: _showIconSelectionDialog,
           icon: Icon(
             Icons.add_a_photo,
@@ -107,6 +110,7 @@ class _CueCardViewState extends State<CueCardView> {
               ),
               child: TextField(
                 controller: widget.controllers.titleController,
+                readOnly: widget.readOnly,
                 expands: true,
                 maxLines: null,
                 textAlignVertical: TextAlignVertical.center,
@@ -202,6 +206,7 @@ class _CueCardViewState extends State<CueCardView> {
       sectionName: 'Description',
       flex: 3,
       controller: widget.controllers.descriptionController,
+      readOnly: widget.readOnly,
     );
   }
 
@@ -214,6 +219,7 @@ class _CueCardViewState extends State<CueCardView> {
             sectionName: 'Notes',
             flex: 7,
             controller: widget.controllers.notesController,
+            readOnly: widget.readOnly,
           ),
           _buildBoxesColumn(),
         ],
@@ -230,11 +236,13 @@ class _CueCardViewState extends State<CueCardView> {
             sectionName: 'Box 1',
             flex: 1,
             controller: widget.controllers.box1Controller,
+            readOnly: widget.readOnly,
           ),
           CueCardSection(
             sectionName: 'Box 2',
             flex: 1,
             controller: widget.controllers.box2Controller,
+            readOnly: widget.readOnly,
           ),
         ],
       ),

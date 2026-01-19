@@ -6,11 +6,13 @@ class CueCardSection extends StatelessWidget {
     required this.sectionName,
     required this.flex,
     required this.controller,
+    this.readOnly = false,
   });
 
   final String sectionName;
   final int flex;
   final TextEditingController controller;
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +25,7 @@ class CueCardSection extends StatelessWidget {
         ),
         child: TextField(
           controller: controller,
+          readOnly: readOnly,
           expands: true,
           maxLines: null,
           textAlignVertical: TextAlignVertical.center,
