@@ -1,11 +1,15 @@
 import 'package:dnd_cuecard_app/app_state.dart';
+import 'package:dnd_cuecard_app/logic/database_backup_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'screens/cue_card_creator_view.dart';
 import 'screens/cue_card_library_view.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Ensure backup exists or create one on startup
+  await DatabaseBackupManager.ensureRecentBackup();
   runApp(MyApp());
 }
 
