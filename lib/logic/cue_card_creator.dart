@@ -200,7 +200,7 @@ class CueCardCreator {
     if (rel == null) return [];
     final parent1 = await _cueCardDatabase.getCueCard(rel.parent1Id);
     final parent2 = await _cueCardDatabase.getCueCard(rel.parent2Id);
-    return [if (parent1 != null) parent1, if (parent2 != null) parent2];
+    return [?parent1, ?parent2];
   }
 
   static Future<CueCard?> getChild(int parent1Id, int parent2Id) async {

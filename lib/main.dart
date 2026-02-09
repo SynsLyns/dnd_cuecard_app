@@ -1,16 +1,54 @@
+import 'dart:convert';
+
 import 'package:dnd_cuecard_app/app_state.dart';
+import 'package:dnd_cuecard_app/models/initiative_app_state.dart';
 import 'package:dnd_cuecard_app/logic/database_backup_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:desktop_multi_window/desktop_multi_window.dart';
 
 import 'screens/cue_card_creator_view.dart';
 import 'screens/cue_card_library_view.dart';
+import 'screens/initiative_tracker_view.dart';
 
-void main() async {
+void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
   // Ensure backup exists or create one on startup
   await DatabaseBackupManager.ensureRecentBackup();
-  runApp(MyApp());
+
+  // Get the current window controller
+  final windowController = await WindowController.fromCurrentEngine();
+  final arguments = windowController.arguments.isNotEmpty
+    ? jsonDecode(windowController.arguments)
+    : <String, dynamic>{};
+
+  // Run different apps based on the window type
+  // TODO: use a enum here instead of stringly typed routes
+  if (arguments['route'] == 'initiative') {
+    runApp(const InitiativeTrackerApp());
+  } else {
+    runApp(const MyApp());
+  }
+}
+
+/// Build the initiative tracker app for child windows
+class InitiativeTrackerApp extends StatelessWidget {
+  const InitiativeTrackerApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (context) => InitiativeAppState(),
+      child: MaterialApp(
+        title: 'Initiative Tracker',
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal, brightness: Brightness.light),
+        ),
+        home: const InitiativeTrackerView(),
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {

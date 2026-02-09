@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:math';
 
+import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:dnd_cuecard_app/app_state.dart';
 import 'package:dnd_cuecard_app/models/cue_card.dart';
 import 'package:dnd_cuecard_app/screens/cue_card_form_controllers.dart';
@@ -90,6 +92,16 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
     context.read<AppState>().selectCard(card);
   }
 
+  Future<void> _openInitiativeTrackerInNewWindow() async {
+    final args = jsonEncode({'route': 'initiative'});
+    final controller = await WindowController.create(
+      WindowConfiguration(
+        arguments: args,
+      ),
+    );
+    await controller.show();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -121,6 +133,11 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
             ],
           ),
           const Spacer(),
+          ElevatedButton(
+            onPressed: _openInitiativeTrackerInNewWindow,
+            child: const Text('Initiative Tracker'),
+          ),
+          Padding(padding: const EdgeInsets.only(left: 8.0)),
           if (_selectedTab == 0) _buildViewEditModeToggle(),
         ],
       ),

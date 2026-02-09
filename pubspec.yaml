@@ -44,6 +44,7 @@ dependencies:
   material_color_utilities: ^0.11.1
   meta: ^1.16.0
   crypto: ^3.0.3
+  desktop_multi_window: ^0.3.0
 
 dev_dependencies:
   flutter_test:
