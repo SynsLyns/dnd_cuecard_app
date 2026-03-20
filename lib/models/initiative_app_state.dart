@@ -32,6 +32,18 @@ class InitiativeAppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void damage(int index, int amount) {
+    final item = initiativeItems[index];
+    item.hp = (item.hp - amount).clamp(0, item.maxHp);
+    notifyListeners();
+  }
+
+  void heal(int index, int amount) {
+    final item = initiativeItems[index];
+    item.hp = (item.hp + amount).clamp(0, item.maxHp);
+    notifyListeners();
+  }
+
   void startCooldown(int itemIndex, int chargeIndex) {
     initiativeItems[itemIndex].startCooldown(chargeIndex);
     notifyListeners();
@@ -51,5 +63,32 @@ class InitiativeAppState extends ChangeNotifier {
       initiativeItems[currentTurnIndex].nextTurn();
       notifyListeners();
     }
+  }
+
+  void incrementExhaustion(int index) {
+    final item = initiativeItems[index];
+    item.exhaustion = (item.exhaustion + 1).clamp(0, 6);
+    notifyListeners();
+  }
+
+  void decrementExhaustion(int index) {
+    final item = initiativeItems[index];
+    item.exhaustion = (item.exhaustion - 1).clamp(0, 6);
+    notifyListeners();
+  }
+
+  void setHp(int index, int hp) {
+    final item = initiativeItems[index];
+    item.hp = hp.clamp(0, item.maxHp);
+    notifyListeners();
+  }
+
+  void setMaxHp(int index, int maxHp) {
+    final item = initiativeItems[index];
+    item.maxHp = maxHp.clamp(1, 99999);
+    if (item.hp > item.maxHp) {
+      item.hp = item.maxHp;
+    }
+    notifyListeners();
   }
 }

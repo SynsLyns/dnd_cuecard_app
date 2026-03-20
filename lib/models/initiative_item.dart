@@ -3,6 +3,9 @@ class InitiativeItem {
   int initiative;
   int capacity;
   int cooldown;
+  int exhaustion;
+  int hp;
+  int maxHp;
   List<int> cooldownTimers;
 
   InitiativeItem({
@@ -10,7 +13,11 @@ class InitiativeItem {
     required this.initiative,
     required this.capacity,
     required this.cooldown,
-  }) : cooldownTimers = List.filled(capacity, 0);
+    this.exhaustion = 0,
+    this.hp = 0,
+    this.maxHp = 0,
+  })  : cooldownTimers = List.filled(capacity, 0),
+        assert(hp <= maxHp, 'hp cannot exceed maxHp');
 
   // To copy for state updates
   InitiativeItem copyWith({
@@ -18,6 +25,9 @@ class InitiativeItem {
     int? initiative,
     int? capacity,
     int? cooldown,
+    int? exhaustion,
+    int? hp,
+    int? maxHp,
     List<int>? cooldownTimers,
   }) {
     return InitiativeItem(
@@ -25,6 +35,9 @@ class InitiativeItem {
       initiative: initiative ?? this.initiative,
       capacity: capacity ?? this.capacity,
       cooldown: cooldown ?? this.cooldown,
+      exhaustion: exhaustion ?? this.exhaustion,
+      hp: hp ?? this.hp,
+      maxHp: maxHp ?? this.maxHp,
     )..cooldownTimers = cooldownTimers ?? List.from(this.cooldownTimers);
   }
 
