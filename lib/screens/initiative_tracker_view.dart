@@ -40,8 +40,6 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
   final _maxHpController = TextEditingController();
   final _hpController = TextEditingController();
 
-  final Map<int, TextEditingController> _maxHpControllers = {};
-
   @override
   void dispose() {
     _nameController.dispose();
@@ -51,9 +49,6 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
     _exhaustionController.dispose();
     _maxHpController.dispose();
     _hpController.dispose();
-    for (final controller in _maxHpControllers.values) {
-      controller.dispose();
-    }
     super.dispose();
   }
 
@@ -116,13 +111,13 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
               keyboardType: TextInputType.number,
             ),
             TextField(
-              controller: _maxHpController,
-              decoration: const InputDecoration(labelText: 'Max HP'),
+              controller: _hpController,
+              decoration: const InputDecoration(labelText: 'Current HP'),
               keyboardType: TextInputType.number,
             ),
             TextField(
-              controller: _hpController,
-              decoration: const InputDecoration(labelText: 'Current HP'),
+              controller: _maxHpController,
+              decoration: const InputDecoration(labelText: 'Max HP'),
               keyboardType: TextInputType.number,
             ),
             TextField(
@@ -164,10 +159,6 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                 final item = items[index];
                 final isCurrentTurn = index == appState.currentTurnIndex;
 
-                // Initialize max HP controller if needed
-                if (!_maxHpControllers.containsKey(index)) {
-                  _maxHpControllers[index] = TextEditingController(text: item.maxHp.toString());
-                }
                 return GestureDetector(
                   onTap: () => appState.setCurrentTurn(index),
                   child: Card(
@@ -343,7 +334,7 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                         key: ValueKey(
                                                           'maxhp-${item.name}',
                                                         ),
-                                                        controller: _maxHpControllers[index],
+                                                        initialValue: item.maxHp.toString(),
                                                         textAlign:
                                                             TextAlign.center,
                                                         decoration:
