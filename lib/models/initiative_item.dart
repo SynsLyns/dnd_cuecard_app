@@ -7,6 +7,8 @@ class InitiativeItem {
   int hp;
   int maxHp;
   List<int> cooldownTimers;
+  bool toggleState;
+  int cd1State;
 
   InitiativeItem({
     required this.name,
@@ -16,6 +18,8 @@ class InitiativeItem {
     this.exhaustion = 0,
     this.hp = 0,
     this.maxHp = 0,
+    this.toggleState = false,
+    this.cd1State = 0,
   })  : cooldownTimers = List.filled(capacity, 0),
         assert(hp <= maxHp, 'hp cannot exceed maxHp');
 
@@ -29,6 +33,8 @@ class InitiativeItem {
     int? hp,
     int? maxHp,
     List<int>? cooldownTimers,
+    bool? toggleState,
+    int? cd1State,
   }) {
     return InitiativeItem(
       name: name ?? this.name,
@@ -38,6 +44,8 @@ class InitiativeItem {
       exhaustion: exhaustion ?? this.exhaustion,
       hp: hp ?? this.hp,
       maxHp: maxHp ?? this.maxHp,
+      toggleState: toggleState ?? this.toggleState,
+      cd1State: cd1State ?? this.cd1State,
     )..cooldownTimers = cooldownTimers ?? List.from(this.cooldownTimers);
   }
 
@@ -47,11 +55,30 @@ class InitiativeItem {
         cooldownTimers[i]--;
       }
     }
+    if (cd1State > 0) {
+      cd1State--;
+    }
   }
 
   void startCooldown(int index) {
     if (index < capacity && cooldownTimers[index] == 0) {
       cooldownTimers[index] = cooldown;
+    }
+  }
+
+  void toggleToggle() {
+    toggleState = !toggleState;
+  }
+
+  void startCd1() {
+    if (cd1State == 0) {
+      cd1State = 1;
+    }
+  }
+
+  void decrementCd1() {
+    if (cd1State > 0) {
+      cd1State--;
     }
   }
 }

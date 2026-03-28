@@ -473,74 +473,152 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                 ],
                               ),
                               Row(
-                                children: List.generate(item.capacity, (
-                                  chargeIndex,
-                                ) {
-                                  final timer =
-                                      item.cooldownTimers[chargeIndex];
-                                  return Padding(
+                                children: [
+                                  ...List.generate(item.capacity, (
+                                    chargeIndex,
+                                  ) {
+                                    final timer =
+                                        item.cooldownTimers[chargeIndex];
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 2,
+                                      ),
+                                      child: timer == 0
+                                          ? InkWell(
+                                              onTap: () => appState.startCooldown(
+                                                index,
+                                                chargeIndex,
+                                              ),
+                                              borderRadius: BorderRadius.circular(
+                                                12,
+                                              ),
+                                              child: Container(
+                                                width: 26,
+                                                height: 26,
+                                                decoration: BoxDecoration(
+                                                  color: Theme.of(
+                                                    context,
+                                                  ).colorScheme.surfaceContainerHighest,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.circle_outlined,
+                                                  size: 16,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                            )
+                                          : InkWell(
+                                              onTap: () =>
+                                                  appState.decrementCooldown(
+                                                    index,
+                                                    chargeIndex,
+                                                  ),
+                                              borderRadius: BorderRadius.circular(
+                                                20,
+                                              ),
+                                              child: Container(
+                                                width: 26,
+                                                height: 26,
+                                                decoration: BoxDecoration(
+                                                  color: Theme.of(
+                                                    context,
+                                                  ).colorScheme.primary,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    timer.toString(),
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: Theme.of(
+                                                        context,
+                                                      ).colorScheme.onPrimary,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                    );
+                                  }),
+                                  // CD1 circle (cooldown of 1, no timer display)
+                                  Padding(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 2,
                                     ),
-                                    child: timer == 0
+                                    child: item.cd1State == 0
                                         ? InkWell(
-                                            onTap: () => appState.startCooldown(
-                                              index,
-                                              chargeIndex,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
+                                            onTap: () =>
+                                                appState.startCd1(index),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
                                             child: Container(
-                                              width: 26,
-                                              height: 26,
+                                              width: 20,
+                                              height: 20,
                                               decoration: BoxDecoration(
                                                 color: Theme.of(
                                                   context,
-                                                ).colorScheme.surfaceContainerHighest,
+                                                ).colorScheme
+                                                    .surfaceContainerHighest,
                                                 shape: BoxShape.circle,
                                               ),
                                               child: const Icon(
                                                 Icons.circle_outlined,
-                                                size: 16,
+                                                size: 12,
                                                 color: Colors.grey,
                                               ),
                                             ),
                                           )
                                         : InkWell(
                                             onTap: () =>
-                                                appState.decrementCooldown(
-                                                  index,
-                                                  chargeIndex,
-                                                ),
-                                            borderRadius: BorderRadius.circular(
-                                              20,
-                                            ),
+                                                appState.decrementCd1(index),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
                                             child: Container(
-                                              width: 26,
-                                              height: 26,
+                                              width: 20,
+                                              height: 20,
                                               decoration: BoxDecoration(
-                                                color: Theme.of(
-                                                  context,
-                                                ).colorScheme.primary,
+                                                color: Color(0xFF000096),
                                                 shape: BoxShape.circle,
-                                              ),
-                                              child: Center(
-                                                child: Text(
-                                                  timer.toString(),
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Theme.of(
-                                                      context,
-                                                    ).colorScheme.onPrimary,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
                                               ),
                                             ),
                                           ),
-                                  );
-                                }),
+                                  ),
+                                  // Toggle circle
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 2,
+                                    ),
+                                    child: InkWell(
+                                      onTap: () =>
+                                          appState.toggleToggleState(index),
+                                      borderRadius:
+                                          BorderRadius.circular(12),
+                                      child: Container(
+                                        width: 20,
+                                        height: 20,
+                                        decoration: BoxDecoration(
+                                          color: item.toggleState
+                                              ? Color(0xFFFF6700)
+                                              : Theme.of(context)
+                                                  .colorScheme
+                                                  .surfaceContainerHighest,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          item.toggleState
+                                              ? Icons.circle
+                                              : Icons.circle_outlined,
+                                          size: 12,
+                                          color: item.toggleState
+                                              ? Color(0xFFFF6700)
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),

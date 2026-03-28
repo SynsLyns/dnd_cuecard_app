@@ -91,4 +91,19 @@ class InitiativeAppState extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  void toggleToggleState(int index) {
+    initiativeItems[index].toggleToggle();
+    notifyListeners();
+  }
+
+  void startCd1(int index) {
+    initiativeItems[index].startCd1();
+    notifyListeners();
+  }
+
+  void decrementCd1(int index) {
+    initiativeItems[index].decrementCd1();
+    notifyListeners();
+  }
 }
