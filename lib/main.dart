@@ -10,11 +10,19 @@ import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'screens/cue_card_creator_view.dart';
 import 'screens/cue_card_library_view.dart';
 import 'screens/initiative_tracker_view.dart';
+import 'config/supabase_config.dart';
+import 'logic/supabase_service.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
   // Ensure backup exists or create one on startup
   await DatabaseBackupManager.ensureRecentBackup();
+
+  // Load Supabase configuration and initialize client if configured
+  await SupabaseConfig.loadSavedConfig();
+  if (SupabaseConfig.isConfigured) {
+    await SupabaseService().initializeClient();
+  }
 
   // Get the current window controller
   final windowController = await WindowController.fromCurrentEngine();

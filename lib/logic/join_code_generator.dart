@@ -6,11 +6,14 @@ import 'dart:math';
 /// - 0 and O
 /// - 1, I, and L
 class JoinCodeGenerator {
-  static const String alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  static const String alphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 
   /// Generates a single join code of specified length (default 6).
   static String generate([int length = 6, Random? random]) {
-    assert(length >= 4 && length <= 16, 'Join code length should be between 4 and 16');
+    assert(
+      length >= 4 && length <= 16,
+      'Join code length should be between 4 and 16',
+    );
     final rng = random ?? Random.secure();
     final buffer = StringBuffer();
     for (int i = 0; i < length; i++) {
@@ -33,7 +36,8 @@ class JoinCodeGenerator {
         return code;
       }
     }
-    // If collision persists, try with a slightly longer code
-    return generate(length + 1, random);
+    throw StateError(
+      'Unable to generate a unique join code after $maxRetries attempts.',
+    );
   }
 }

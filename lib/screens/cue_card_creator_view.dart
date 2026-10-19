@@ -15,6 +15,7 @@ import '../models/card_type.dart';
 import '../models/rarity.dart';
 import '../widgets/card_options.dart';
 import '../widgets/cue_card/cue_card_view.dart';
+import 'campaign_management_dialog.dart';
 
 class CueCardCreatorView extends StatefulWidget {
   const CueCardCreatorView({super.key});
@@ -133,11 +134,22 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
             ],
           ),
           const Spacer(),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.campaign, size: 18),
+            label: const Text('Campaigns'),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => const CampaignManagementDialog(),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
           ElevatedButton(
             onPressed: _openInitiativeTrackerInNewWindow,
             child: const Text('Initiative Tracker'),
           ),
-          Padding(padding: const EdgeInsets.only(left: 8.0)),
+          const SizedBox(width: 8),
           if (_selectedTab == 0) _buildViewEditModeToggle(),
         ],
       ),
@@ -205,6 +217,11 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
   }
 
   Widget _buildActionButtons(double minConstraint) {
+    final appState = context.watch<AppState>();
+    final hasActiveCampaign = appState.activeCampaignId != null;
+    final selectedCard = _selectedCard;
+    final shareStatus = selectedCard != null ? appState.getCardShareStatus(selectedCard) : CardShareStatus.notShared;
+
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: minConstraint * 0.11),
       child: Row(
@@ -226,6 +243,44 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
             onPressed: _handleManageCategories,
             child: const Text('Manage Categories'),
           ),
+          if (selectedCard != null && hasActiveCampaign) ...[
+            const SizedBox(width: 16),
+            ElevatedButton.icon(
+              icon: Icon(
+                shareStatus == CardShareStatus.changesNotPushed
+                    ? Icons.cloud_upload
+                    : shareStatus == CardShareStatus.upToDate
+                        ? Icons.check_circle_outline
+                        : Icons.share,
+                size: 18,
+              ),
+              label: Text(
+                shareStatus == CardShareStatus.changesNotPushed
+                    ? 'Push Update'
+                    : shareStatus == CardShareStatus.upToDate
+                        ? 'Shared (Up to date)'
+                        : 'Share to Players',
+              ),
+              onPressed: shareStatus == CardShareStatus.upToDate
+                  ? null
+                  : () async {
+                      try {
+                        await appState.shareCard(selectedCard);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Card synced with players!')),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Sync failed: $e')),
+                          );
+                        }
+                      }
+                    },
+            ),
+          ],
         ],
       ),
     );

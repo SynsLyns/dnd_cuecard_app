@@ -45,6 +45,8 @@ dependencies:
   meta: ^1.16.0
   crypto: ^3.0.3
   desktop_multi_window: ^0.3.0
+  supabase_flutter: ^2.18.3
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
