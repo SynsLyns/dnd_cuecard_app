@@ -1,101 +1,266 @@
--- ==============================================================================
--- sharing_rls_test.sql: SQL Test Script for Sharing RLS & Permissions
--- Run in Supabase SQL Editor or via supabase test db
--- ==============================================================================
-
+-- Run after all sharing migrations in a disposable Supabase project or test DB.
+-- The transaction rolls back all fixtures. Distinct JWT subjects exercise RLS.
 begin;
 
--- Create mock users in auth.users if not already present
 do $$
 declare
-  dm_id uuid := '11111111-1111-1111-1111-111111111111';
-  player_a_id uuid := '22222222-2222-2222-2222-222222222222';
-  player_b_id uuid := '33333333-3333-3333-3333-333333333333';
-  non_member_id uuid := '44444444-4444-4444-4444-444444444444';
+  test_users uuid[] := array[
+    '11111111-1111-1111-1111-111111111111'::uuid,
+    '22222222-2222-2222-2222-222222222222'::uuid,
+    '33333333-3333-3333-3333-333333333333'::uuid,
+    '44444444-4444-4444-4444-444444444444'::uuid,
+    '55555555-5555-5555-5555-555555555555'::uuid
+  ];
 begin
-  -- Ensure test users exist in auth.users
   insert into auth.users (id, email)
-  values 
-    (dm_id, 'dm@test.local'),
-    (player_a_id, 'player_a@test.local'),
-    (player_b_id, 'player_b@test.local'),
-    (non_member_id, 'stranger@test.local')
+  select user_id, user_id::text || '@sharing-test.invalid'
+  from unnest(test_users) as user_id
   on conflict (id) do nothing;
 end;
 $$;
 
--- 1. Test DM Creating Campaigns
 set local role authenticated;
+
+-- DM A owns Campaign A.
 set local "request.jwt.claim.sub" to '11111111-1111-1111-1111-111111111111';
+insert into public.campaigns (id, dm_id, name, join_code)
+values (
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  '11111111-1111-1111-1111-111111111111',
+  'Campaign A',
+  'CAMP01'
+);
 
-insert into campaigns (id, dm_id, name, join_code)
-values 
-  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'Campaign A', 'CAMP01'),
-  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '11111111-1111-1111-1111-111111111111', 'Campaign B', 'CAMP02');
-
--- DM Shares a card to Campaign A
-insert into shared_cards (id, campaign_id, source_card_uuid, payload)
+insert into public.shared_cards (id, campaign_id, source_card_uuid, payload)
 values (
   'cccccccc-cccc-cccc-cccc-cccccccccccc',
   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   '99999999-9999-9999-9999-999999999999',
-  '{"title": "Fireball", "notes": "DM test card"}'::jsonb
+  '{"title": "Fireball"}'::jsonb
 );
 
--- 2. Test Player A Joining Campaign A via RPC
-set local "request.jwt.claim.sub" to '22222222-2222-2222-2222-222222222222';
-select * from join_campaign('CAMP01', 'Player Alpha');
+-- DM B owns Campaign B and its card.
+set local "request.jwt.claim.sub" to '55555555-5555-5555-5555-555555555555';
+insert into public.campaigns (id, dm_id, name, join_code)
+values (
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+  '55555555-5555-5555-5555-555555555555',
+  'Campaign B',
+  'CAMP02'
+);
+insert into public.shared_cards (id, campaign_id, source_card_uuid, payload)
+values (
+  'dddddddd-dddd-dddd-dddd-dddddddddddd',
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+  '88888888-8888-8888-8888-888888888888',
+  '{"title": "Secret"}'::jsonb
+);
 
--- Player A can view shared cards in Campaign A
+-- DM A can manage only its own campaigns and cards.
+set local "request.jwt.claim.sub" to '11111111-1111-1111-1111-111111111111';
 do $$
 declare
-  card_count int;
+  changed_rows integer;
 begin
-  select count(*) into card_count from shared_cards where campaign_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-  if card_count <> 1 then
-    raise exception 'TEST FAILED: Player A should see 1 card in Campaign A, found %', card_count;
+  update public.campaigns set name = 'Campaign A Updated'
+  where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  get diagnostics changed_rows = row_count;
+  if changed_rows <> 1 then
+    raise exception 'TEST FAILED: DM could not update its campaign';
   end if;
-end;
-$$;
 
--- 3. Test: Player A cannot write/insert into shared_cards
-do $$
-begin
+  select count(*) into changed_rows from public.campaigns
+  where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  if changed_rows <> 0 then
+    raise exception 'TEST FAILED: DM saw another DM campaign';
+  end if;
+
+  update public.shared_cards set payload = '{"title":"Updated"}'::jsonb
+  where id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  get diagnostics changed_rows = row_count;
+  if changed_rows <> 1 then
+    raise exception 'TEST FAILED: DM could not update its shared card';
+  end if;
+
   begin
-    insert into shared_cards (campaign_id, source_card_uuid, payload)
-    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', gen_random_uuid(), '{"title": "Hacked"}'::jsonb);
-    raise exception 'TEST FAILED: Player A was able to insert into shared_cards!';
-  exception when insufficient_privilege or integrity_constraint_violation then
-    -- Expected behavior: RLS blocks player insert
+    insert into public.shared_cards (campaign_id, source_card_uuid, payload)
+    values (
+      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      gen_random_uuid(),
+      '{"title":"Unauthorized"}'::jsonb
+    );
+    raise exception 'TEST FAILED: DM wrote to another DM campaign';
+  exception when insufficient_privilege then
     null;
   end;
 end;
 $$;
 
--- 4. Test: Player A cannot see Campaign B or its cards
+-- Members can join only through the RPC, see campaign peers, and read cards
+-- only in their own campaign.
+set local "request.jwt.claim.sub" to '22222222-2222-2222-2222-222222222222';
+select * from public.join_campaign('CAMP01', 'Player Alpha');
+
+set local "request.jwt.claim.sub" to '33333333-3333-3333-3333-333333333333';
+select * from public.join_campaign('CAMP01', 'Player Beta');
+
+set local "request.jwt.claim.sub" to '22222222-2222-2222-2222-222222222222';
 do $$
 declare
-  b_count int;
+  visible_count integer;
+  changed_rows integer;
 begin
-  select count(*) into b_count from campaigns where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-  if b_count <> 0 then
-    raise exception 'TEST FAILED: Player A should not see Campaign B, found %', b_count;
+  select count(*) into visible_count from public.shared_cards
+  where campaign_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  if visible_count <> 1 then
+    raise exception 'TEST FAILED: campaign member did not see its card';
+  end if;
+
+  select count(*) into visible_count from public.campaigns
+  where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  if visible_count <> 0 then
+    raise exception 'TEST FAILED: member saw a different campaign';
+  end if;
+
+  select count(*) into visible_count from public.shared_cards
+  where campaign_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  if visible_count <> 0 then
+    raise exception 'TEST FAILED: member saw a different campaign card';
+  end if;
+
+  select count(*) into visible_count from public.campaign_members
+  where campaign_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  if visible_count <> 2 then
+    raise exception 'TEST FAILED: members could not see campaign peers';
+  end if;
+
+  update public.campaigns set name = 'Player write'
+  where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  get diagnostics changed_rows = row_count;
+  if changed_rows <> 0 then
+    raise exception 'TEST FAILED: member updated campaign details';
+  end if;
+
+  delete from public.campaigns
+  where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  get diagnostics changed_rows = row_count;
+  if changed_rows <> 0 then
+    raise exception 'TEST FAILED: member deleted a campaign';
+  end if;
+
+  delete from public.campaign_members
+  where campaign_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+    and user_id = '33333333-3333-3333-3333-333333333333';
+  get diagnostics changed_rows = row_count;
+  if changed_rows <> 0 then
+    raise exception 'TEST FAILED: member removed another campaign member';
+  end if;
+
+  begin
+    insert into public.campaign_members (campaign_id, user_id, display_name)
+    values (
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      '44444444-4444-4444-4444-444444444444',
+      'Direct join attempt'
+    );
+    raise exception 'TEST FAILED: player inserted a campaign member directly';
+  exception when insufficient_privilege then
+    null;
+  end;
+
+  begin
+    insert into public.shared_cards (campaign_id, source_card_uuid, payload)
+    values (
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      gen_random_uuid(),
+      '{"title":"Player write"}'::jsonb
+    );
+    raise exception 'TEST FAILED: player inserted a shared card';
+  exception when insufficient_privilege then
+    null;
+  end;
+
+  update public.shared_cards set payload = '{"title":"Player write"}'::jsonb
+  where id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  get diagnostics changed_rows = row_count;
+  if changed_rows <> 0 then
+    raise exception 'TEST FAILED: player updated a shared card';
+  end if;
+
+  delete from public.shared_cards
+  where id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  get diagnostics changed_rows = row_count;
+  if changed_rows <> 0 then
+    raise exception 'TEST FAILED: player deleted a shared card';
   end if;
 end;
 $$;
 
--- 5. Test: Non-member cannot see any cards
+-- A non-member sees no campaigns or cards.
 set local "request.jwt.claim.sub" to '44444444-4444-4444-4444-444444444444';
 do $$
 declare
-  nm_count int;
+  visible_count integer;
 begin
-  select count(*) into nm_count from shared_cards;
-  if nm_count <> 0 then
-    raise exception 'TEST FAILED: Non-member should see 0 shared cards, found %', nm_count;
+  select count(*) into visible_count from public.campaigns;
+  if visible_count <> 0 then
+    raise exception 'TEST FAILED: non-member saw a campaign';
   end if;
+
+  select count(*) into visible_count from public.shared_cards;
+  if visible_count <> 0 then
+    raise exception 'TEST FAILED: non-member saw a shared card';
+  end if;
+
+  select count(*) into visible_count from public.campaign_members;
+  if visible_count <> 0 then
+    raise exception 'TEST FAILED: non-member saw campaign members';
+  end if;
+end;
+$$;
+
+-- Revocation hides the payload but publishes a member-readable ID-only event.
+set local "request.jwt.claim.sub" to '11111111-1111-1111-1111-111111111111';
+update public.shared_cards set revoked = true
+where id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+
+set local "request.jwt.claim.sub" to '22222222-2222-2222-2222-222222222222';
+do $$
+declare
+  visible_count integer;
+begin
+  select count(*) into visible_count from public.shared_cards
+  where id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  if visible_count <> 0 then
+    raise exception 'TEST FAILED: revoked card remained visible';
+  end if;
+
+  select count(*) into visible_count from public.card_share_events
+  where campaign_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+    and shared_card_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
+    and event_type = 'revoked';
+  if visible_count <> 1 then
+    raise exception 'TEST FAILED: member did not receive a revocation event';
+  end if;
+end;
+$$;
+
+-- The JSON payload byte limit is enforced by Postgres.
+set local "request.jwt.claim.sub" to '11111111-1111-1111-1111-111111111111';
+do $$
+begin
+  begin
+    insert into public.shared_cards (campaign_id, source_card_uuid, payload)
+    values (
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      gen_random_uuid(),
+      jsonb_build_object('oversized', repeat('x', 100001))
+    );
+    raise exception 'TEST FAILED: oversized payload was accepted';
+  exception when check_violation then
+    null;
+  end;
 end;
 $$;
 
 rollback;
--- Tests completed successfully!

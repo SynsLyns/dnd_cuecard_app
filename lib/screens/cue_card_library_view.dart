@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dnd_cuecard_app/app_state.dart';
 import 'package:dnd_cuecard_app/models/cue_card.dart';
 import 'package:dnd_cuecard_app/models/tag.dart';
+import 'package:dnd_cuecard_app/logic/supabase_service.dart';
 import 'package:dnd_cuecard_app/widgets/tag/tag_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -147,7 +148,12 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not push card updates: $error')),
+          SnackBar(
+            content: Text(
+              'Could not push card updates: '
+              '${CloudSharingException.userMessage(error)}',
+            ),
+          ),
         );
       }
     } finally {
@@ -170,7 +176,12 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not share selected cards: $error')),
+          SnackBar(
+            content: Text(
+              'Could not share selected cards: '
+              '${CloudSharingException.userMessage(error)}',
+            ),
+          ),
         );
       }
     } finally {

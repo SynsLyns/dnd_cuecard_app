@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:dnd_cuecard_app/app_state.dart';
+import 'package:dnd_cuecard_app/logic/supabase_service.dart';
 import 'package:dnd_cuecard_app/models/cue_card.dart';
 import 'package:dnd_cuecard_app/screens/cue_card_form_controllers.dart';
 import 'package:dnd_cuecard_app/screens/management_modal_view.dart';
@@ -274,7 +275,11 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
                       } catch (e) {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Sync failed: $e')),
+                            SnackBar(
+                              content: Text(
+                                'Sync failed: ${CloudSharingException.userMessage(e)}',
+                              ),
+                            ),
                           );
                         }
                       }

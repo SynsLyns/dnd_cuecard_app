@@ -155,6 +155,17 @@ class PlayerAppState extends ChangeNotifier {
           ),
           callback: (_) => unawaited(_refreshCardsFromRealtime()),
         )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'card_share_events',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'campaign_id',
+            value: id,
+          ),
+          callback: (_) => unawaited(_refreshCardsFromRealtime()),
+        )
         .subscribe();
   }
 

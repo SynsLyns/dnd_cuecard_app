@@ -42,6 +42,7 @@ class AppState extends ChangeNotifier {
   Map<String, CardShare> cardShares = {};
   List<Campaign> campaigns = [];
   String? activeCampaignId;
+  String? sharingError;
 
   CueCard? selectedCard;
 
@@ -126,19 +127,27 @@ class AppState extends ChangeNotifier {
       final shares = await _cueCardDatabase.getAllCardShares();
       cardShares = {for (final s in shares) '${s.cardUuid}_${s.campaignId}': s};
       notifyListeners();
-    } catch (_) {}
+    } catch (error) {
+      sharingError = 'Unable to load local sharing status: $error';
+      notifyListeners();
+    }
   }
 
   Future<void> loadCampaigns() async {
+    if (_supabaseService.currentUser == null) return;
     try {
-      if (_supabaseService.currentUser != null) {
-        campaigns = await _supabaseService.fetchDmCampaigns();
-        if (activeCampaignId == null && campaigns.isNotEmpty) {
-          activeCampaignId = campaigns.first.id;
-        }
-        notifyListeners();
+      campaigns = await _supabaseService.fetchDmCampaigns();
+      if (activeCampaignId == null && campaigns.isNotEmpty) {
+        activeCampaignId = campaigns.first.id;
       }
-    } catch (_) {}
+      sharingError = null;
+      notifyListeners();
+    } catch (error) {
+      sharingError =
+          'Could not load campaigns. Check your connection and Supabase '
+          'project status; free projects may pause after inactivity. ($error)';
+      notifyListeners();
+    }
   }
 
   void setActiveCampaign(String? campaignId) {
@@ -224,6 +233,7 @@ class AppState extends ChangeNotifier {
       rarityColor: rarityColor,
     );
     cardShares['${card.uuid}_$campaignId'] = share;
+    sharingError = null;
     notifyListeners();
   }
 
@@ -275,6 +285,7 @@ class AppState extends ChangeNotifier {
       cardUuid: card.uuid!,
     );
     cardShares.remove('${card.uuid}_$campaignId');
+    sharingError = null;
     notifyListeners();
   }
 

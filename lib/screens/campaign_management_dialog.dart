@@ -75,7 +75,9 @@ class _CampaignManagementDialogState extends State<CampaignManagementDialog> {
       _setMessage(info: 'Supabase configuration saved.');
       setState(() => _showConfig = false);
     } catch (e) {
-      _setMessage(error: 'Failed to initialize: $e');
+      _setMessage(
+        error: 'Failed to initialize: ${CloudSharingException.userMessage(e)}',
+      );
     } finally {
       setState(() => _isLoading = false);
     }
@@ -101,7 +103,7 @@ class _CampaignManagementDialogState extends State<CampaignManagementDialog> {
       }
       _setMessage(info: 'Signed in successfully.');
     } catch (e) {
-      _setMessage(error: e.toString());
+      _setMessage(error: CloudSharingException.userMessage(e));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -127,7 +129,7 @@ class _CampaignManagementDialogState extends State<CampaignManagementDialog> {
       }
       _setMessage(info: 'Account registered. You may now sign in.');
     } catch (e) {
-      _setMessage(error: e.toString());
+      _setMessage(error: CloudSharingException.userMessage(e));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -144,7 +146,7 @@ class _CampaignManagementDialogState extends State<CampaignManagementDialog> {
       }
       _setMessage(info: 'Signed out.');
     } catch (e) {
-      _setMessage(error: e.toString());
+      _setMessage(error: CloudSharingException.userMessage(e));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -172,7 +174,7 @@ class _CampaignManagementDialogState extends State<CampaignManagementDialog> {
             'Campaign "${campaign.name}" created with code: ${campaign.joinCode}',
       );
     } catch (e) {
-      _setMessage(error: e.toString());
+      _setMessage(error: CloudSharingException.userMessage(e));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -192,7 +194,7 @@ class _CampaignManagementDialogState extends State<CampaignManagementDialog> {
       }
       _setMessage(info: 'Campaign deleted.');
     } catch (e) {
-      _setMessage(error: e.toString());
+      _setMessage(error: CloudSharingException.userMessage(e));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -262,6 +264,19 @@ class _CampaignManagementDialogState extends State<CampaignManagementDialog> {
                   child: Text(
                     _infoMessage!,
                     style: TextStyle(color: Colors.green.shade900),
+                  ),
+                ),
+              if (appState.sharingError != null)
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    appState.sharingError!,
+                    style: TextStyle(color: Colors.orange.shade900),
                   ),
                 ),
               Expanded(

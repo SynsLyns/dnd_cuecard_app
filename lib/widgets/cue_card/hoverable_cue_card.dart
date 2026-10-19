@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dnd_cuecard_app/app_state.dart';
+import 'package:dnd_cuecard_app/logic/supabase_service.dart';
 import 'package:dnd_cuecard_app/models/cue_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -95,9 +96,13 @@ class _HoverableCueCardState extends State<HoverableCueCard> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Sharing failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Sharing failed: ${CloudSharingException.userMessage(e)}',
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isSharing = false);
@@ -115,9 +120,13 @@ class _HoverableCueCardState extends State<HoverableCueCard> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Push failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Push failed: ${CloudSharingException.userMessage(e)}',
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isSharing = false);
@@ -135,9 +144,13 @@ class _HoverableCueCardState extends State<HoverableCueCard> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Unshare failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Unshare failed: ${CloudSharingException.userMessage(e)}',
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isSharing = false);

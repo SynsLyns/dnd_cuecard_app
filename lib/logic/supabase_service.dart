@@ -11,6 +11,11 @@ class CloudSharingException implements Exception {
   final dynamic cause;
   CloudSharingException(this.message, [this.cause]);
 
+  static String userMessage(Object error) {
+    return '$error Check your connection and Supabase project status; free '
+        'projects may pause after inactivity and can be resumed in the dashboard.';
+  }
+
   @override
   String toString() => message;
 }
