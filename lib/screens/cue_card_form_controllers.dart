@@ -72,6 +72,7 @@ class CueCardFormControllers {
         cardTypeController.text.isEmpty ? null : cardTypes.firstWhere((type) => type.name == cardTypeController.text).id,
         rarityController.text.isEmpty ? null : rarities.firstWhere((r) => r.name == rarityController.text).id,
         image?.path,
+        appState.selectedCard!.uuid,
       );
     } else {
       // Create new card

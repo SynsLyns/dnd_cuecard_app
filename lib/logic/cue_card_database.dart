@@ -6,11 +6,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import '../models/card_share.dart';
 import '../models/card_type.dart';
 import '../models/cue_card.dart';
 import '../models/rarity.dart';
 import '../models/relationship.dart';
 import '../models/tag.dart';
+import 'package:uuid/uuid.dart';
 
 class CueCardDatabase {
   static final CueCardDatabase _instance = CueCardDatabase._internal();
@@ -39,7 +41,7 @@ class CueCardDatabase {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onConfigure: _onConfigure,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
@@ -67,12 +69,47 @@ class CueCardDatabase {
         );
       ''');
     }
+    if (oldVersion < 3) {
+      // 1. Add uuid column to cue_cards
+      await db.execute('ALTER TABLE cue_cards ADD COLUMN uuid TEXT;');
+
+      // 2. Backfill a UUID v4 for every existing row
+      final List<Map<String, Object?>> rows = await db.query('cue_cards', columns: ['id']);
+      const uuidGenerator = Uuid();
+      for (final row in rows) {
+        final id = row['id'] as int;
+        final generatedUuid = uuidGenerator.v4();
+        await db.update(
+          'cue_cards',
+          {'uuid': generatedUuid},
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      }
+
+      // 3. Create unique index on uuid
+      await db.execute('CREATE UNIQUE INDEX idx_cue_cards_uuid ON cue_cards (uuid);');
+
+      // 4. Create card_shares table
+      await db.execute('''
+        CREATE TABLE card_shares (
+          card_uuid TEXT NOT NULL,
+          campaign_id TEXT NOT NULL,
+          shared_card_id TEXT NOT NULL,
+          pushed_version INTEGER NOT NULL,
+          pushed_hash TEXT NOT NULL,
+          pushed_at TEXT NOT NULL,
+          PRIMARY KEY (card_uuid, campaign_id)
+        );
+      ''');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) {
     return db.execute('''
       CREATE TABLE cue_cards (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT NOT NULL UNIQUE,
         title TEXT,
         requirements TEXT,
         description TEXT,
@@ -122,6 +159,16 @@ class CueCardDatabase {
         CHECK (parent1_id != parent2_id),
         CHECK (parent1_id < parent2_id)
       );
+
+      CREATE TABLE card_shares (
+        card_uuid TEXT NOT NULL,
+        campaign_id TEXT NOT NULL,
+        shared_card_id TEXT NOT NULL,
+        pushed_version INTEGER NOT NULL,
+        pushed_hash TEXT NOT NULL,
+        pushed_at TEXT NOT NULL,
+        PRIMARY KEY (card_uuid, campaign_id)
+      );
     ''');
   }
 
@@ -143,37 +190,23 @@ class CueCardDatabase {
     return CueCard.fromMap(cueCard[0], tags);
   }
 
+  Future<CueCard?> getCueCardByUuid(String uuid) async {
+    final db = await database;
+    final List<Map<String, Object?>> cueCard = await db.query('cue_cards', where: 'uuid = ?', whereArgs: [uuid]);
+    if (cueCard.isEmpty) return null;
+    final int id = cueCard[0]['id'] as int;
+    final List<Tag> tags = await getTagsForCueCard(id);
+    return CueCard.fromMap(cueCard[0], tags);
+  }
+
   Future<List<CueCard>> getAllCueCards() async {
     final db = await database;
     final List<Map<String, Object?>> cueCards = await db.query('cue_cards');
     List<CueCard> cueCardList = [];
     for (final cueCardMap in cueCards) {
       final int id = cueCardMap['id'] as int;
-      final String? title = cueCardMap['title'] as String?;
-      final String? requirements = cueCardMap['requirements'] as String?;
-      final String? description = cueCardMap['description'] as String?;
-      final String? box1 = cueCardMap['box1'] as String?;
-      final String? box2 = cueCardMap['box2'] as String?;
-      final String? notes = cueCardMap['notes'] as String?;
-      final int? type = cueCardMap['type'] as int?;
-      final int? rarity = cueCardMap['rarity'] as int?;
-      final String? icon = cueCardMap['icon'] as String?;
       final List<Tag> tags = await getTagsForCueCard(id);
-
-      cueCardList.add(CueCard(
-        id: id,
-        title: title,
-        requirements: requirements,
-        description: description,
-        box1: box1,
-        box2: box2,
-        notes: notes,
-        tags: tags,
-        dateCreated: null,
-        type: type,
-        rarity: rarity,
-        iconFilePath: icon,
-      ));
+      cueCardList.add(CueCard.fromMap(cueCardMap, tags));
     }
     return cueCardList;
   }
@@ -289,9 +322,16 @@ class CueCardDatabase {
 
   Future<int> updateCueCard(CueCard cueCard) async {
     final db = await database;
+    Map<String, Object?> updateMap = cueCard.toMapForInsert();
+    if (cueCard.uuid == null) {
+      final existing = await db.query('cue_cards', columns: ['uuid'], where: 'id = ?', whereArgs: [cueCard.id]);
+      if (existing.isNotEmpty && existing.first['uuid'] != null) {
+        updateMap['uuid'] = existing.first['uuid'];
+      }
+    }
     int result = await db.update(
       'cue_cards',
-      cueCard.toMapForInsert(),
+      updateMap,
       where: 'id = ?',
       whereArgs: [cueCard.id],
     );
@@ -498,4 +538,57 @@ class CueCardDatabase {
     final List<Map<String, Object?>> maps = await db.query('cue_card_relationships');
     return maps.map((map) => Relationship.fromMap(map)).toList();
   }
+
+  // --- card_shares methods ---
+
+  Future<int> insertOrUpdateCardShare(CardShare share) async {
+    final db = await database;
+    return await db.insert(
+      'card_shares',
+      share.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<CardShare?> getCardShare(String cardUuid, String campaignId) async {
+    final db = await database;
+    final maps = await db.query(
+      'card_shares',
+      where: 'card_uuid = ? AND campaign_id = ?',
+      whereArgs: [cardUuid, campaignId],
+    );
+    if (maps.isNotEmpty) {
+      return CardShare.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<List<CardShare>> getCardSharesForCard(String cardUuid) async {
+    final db = await database;
+    final maps = await db.query(
+      'card_shares',
+      where: 'card_uuid = ?',
+      whereArgs: [cardUuid],
+    );
+    return maps.map((map) => CardShare.fromMap(map)).toList();
+  }
+
+  Future<int> deleteCardShare(String cardUuid, String campaignId) async {
+    final db = await database;
+    return await db.delete(
+      'card_shares',
+      where: 'card_uuid = ? AND campaign_id = ?',
+      whereArgs: [cardUuid, campaignId],
+    );
+  }
+
+  Future<int> deleteCardSharesForCard(String cardUuid) async {
+    final db = await database;
+    return await db.delete(
+      'card_shares',
+      where: 'card_uuid = ?',
+      whereArgs: [cardUuid],
+    );
+  }
 }
+

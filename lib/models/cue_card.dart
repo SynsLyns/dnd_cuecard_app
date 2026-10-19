@@ -1,8 +1,10 @@
 import 'package:dnd_cuecard_app/models/tag.dart';
+import 'package:uuid/uuid.dart';
 import 'relationship.dart';
 
 class CueCard {
   final int? id;
+  final String? uuid;
   final String? title;
   final String? requirements;
   final String? description;
@@ -18,6 +20,7 @@ class CueCard {
 
   CueCard({
     this.id,
+    this.uuid,
     this.title,
     this.requirements,
     this.description,
@@ -32,8 +35,43 @@ class CueCard {
     this.relationship,
   });
 
+  CueCard copyWith({
+    int? id,
+    String? uuid,
+    String? title,
+    String? requirements,
+    String? description,
+    String? box1,
+    String? box2,
+    String? notes,
+    List<Tag>? tags,
+    DateTime? dateCreated,
+    int? type,
+    int? rarity,
+    String? iconFilePath,
+    Relationship? relationship,
+  }) {
+    return CueCard(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      title: title ?? this.title,
+      requirements: requirements ?? this.requirements,
+      description: description ?? this.description,
+      box1: box1 ?? this.box1,
+      box2: box2 ?? this.box2,
+      notes: notes ?? this.notes,
+      tags: tags ?? this.tags,
+      dateCreated: dateCreated ?? this.dateCreated,
+      type: type ?? this.type,
+      rarity: rarity ?? this.rarity,
+      iconFilePath: iconFilePath ?? this.iconFilePath,
+      relationship: relationship ?? this.relationship,
+    );
+  }
+
   Map<String, Object?> toMapForInsert() {
     return {
+      'uuid': (uuid != null && uuid!.isNotEmpty) ? uuid : const Uuid().v4(),
       'title': title,
       'requirements': requirements,
       'description': description,
@@ -50,6 +88,7 @@ class CueCard {
   static CueCard fromMap(Map<String, Object?> map, List<Tag> tags) {
     return CueCard(
       id: map['id'] as int?,
+      uuid: map['uuid'] as String?,
       title: map['title'] as String?,
       requirements: map['requirements'] as String?,
       description: map['description'] as String?,
@@ -67,6 +106,6 @@ class CueCard {
 
   @override
   String toString() {
-    return 'CueCard{id: $id, title: $title, type: $type, rarity: $rarity, requirements: $requirements, description: $description, box1: $box1, box2: $box2, notes: $notes, tags: $tags, dateCreated: $dateCreated, relationship: $relationship}';
+    return 'CueCard{id: $id, uuid: $uuid, title: $title, type: $type, rarity: $rarity, requirements: $requirements, description: $description, box1: $box1, box2: $box2, notes: $notes, tags: $tags, dateCreated: $dateCreated, relationship: $relationship}';
   }
 }

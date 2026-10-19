@@ -33,11 +33,12 @@ class CueCardCreator {
     await _cueCardDatabase.insertCueCard(cueCard);
   }
 
-  static Future<void> updateCueCard(int id, String title, String requirements, String description, String box1, String box2, String notes, List<Tag> tags, int? type, int? rarity, String? iconFilePath) async {
+  static Future<void> updateCueCard(int id, String title, String requirements, String description, String box1, String box2, String notes, List<Tag> tags, int? type, int? rarity, String? iconFilePath, [String? uuid]) async {
     iconFilePath = await getIconFilePath(iconFilePath);
 
     CueCard cueCard = CueCard(
       id: id,
+      uuid: uuid,
       title: title == '' ? null : title,
       requirements: requirements == '' ? null : requirements,
       description: description == '' ? null : description,

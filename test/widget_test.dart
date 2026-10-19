@@ -26,6 +26,8 @@ void main() {
       );
 
       final map = card.toMapForInsert();
+      expect(map['uuid'], isNotNull);
+      expect((map['uuid'] as String).length, equals(36));
       expect(map['title'], equals('Fireball'));
       expect(map['requirements'], equals('V, S, M'));
       expect(map['description'], contains('bright streak'));
@@ -42,9 +44,15 @@ void main() {
       }, tags);
 
       expect(reconstructed.id, equals(42));
+      expect(reconstructed.uuid, equals(map['uuid']));
       expect(reconstructed.title, equals('Fireball'));
       expect(reconstructed.tags.length, equals(2));
       expect(reconstructed.tags[0].name, equals('Spell'));
+
+      final copied = reconstructed.copyWith(title: 'Greater Fireball');
+      expect(copied.id, equals(42));
+      expect(copied.uuid, equals(reconstructed.uuid));
+      expect(copied.title, equals('Greater Fireball'));
     });
   });
 
