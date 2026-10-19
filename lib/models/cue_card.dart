@@ -1,6 +1,7 @@
 import 'package:dnd_cuecard_app/models/tag.dart';
 import 'package:uuid/uuid.dart';
 import 'relationship.dart';
+import '../logic/card_sharing_crypto.dart';
 
 class CueCard {
   final int? id;
@@ -102,6 +103,46 @@ class CueCard {
       iconFilePath: map['icon'] as String?,
       relationship: null,
     );
+  }
+
+  Map<String, dynamic> toSharedPayload({
+    String? typeName,
+    int? typeColor,
+    String? rarityName,
+    int? rarityColor,
+  }) {
+    return {
+      'schema_version': 1,
+      'uuid': uuid,
+      'title': title,
+      'requirements': requirements,
+      'description': description,
+      'box1': box1,
+      'box2': box2,
+      'notes': notes,
+      'type': type,
+      'rarity': rarity,
+      'type_name': ?typeName,
+      'type_color': ?typeColor,
+      'rarity_name': ?rarityName,
+      'rarity_color': ?rarityColor,
+      'tags': tags.map((t) => t.name).toList(),
+      'date_created': dateCreated?.toIso8601String(),
+    };
+  }
+
+  String canonicalHash({
+    String? typeName,
+    int? typeColor,
+    String? rarityName,
+    int? rarityColor,
+  }) {
+    return computeCanonicalHash(toSharedPayload(
+      typeName: typeName,
+      typeColor: typeColor,
+      rarityName: rarityName,
+      rarityColor: rarityColor,
+    ));
   }
 
   @override
