@@ -11,7 +11,10 @@ class NumericRangeFormatter extends TextInputFormatter {
   NumericRangeFormatter({required this.min, required this.max});
 
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     if (newValue.text.isEmpty) return newValue;
     final parsed = int.tryParse(newValue.text);
     if (parsed == null) return oldValue;
@@ -147,11 +150,47 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
       appBar: AppBar(
         title: const Text('Initiative Tracker'),
         actions: [
+          IconButton(
+            tooltip: 'End combat and clear shared encounter',
+            icon: const Icon(Icons.stop_circle_outlined),
+            onPressed: appState.campaignId == null && items.isEmpty
+                ? null
+                : () => _confirmEndCombat(context, appState),
+          ),
           IconButton(icon: const Icon(Icons.add), onPressed: _showAddDialog),
         ],
       ),
       body: Column(
         children: [
+          if (appState.campaignId == null)
+            const ListTile(
+              dense: true,
+              leading: Icon(Icons.info_outline),
+              title: Text(
+                'Select a campaign to share initiative with players.',
+              ),
+            )
+          else
+            ListTile(
+              dense: true,
+              leading: appState.syncError != null
+                  ? const Icon(Icons.error_outline, color: Colors.red)
+                  : appState.isSyncing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.cloud_done_outlined),
+              title: Text(
+                appState.syncError ??
+                    (appState.isSyncing
+                        ? 'Sharing initiative with campaign players...'
+                        : 'Changes sync to campaign players automatically.'),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           Expanded(
             child: ListView.builder(
               itemCount: items.length,
@@ -250,13 +289,15 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                 height: 18,
                                                 child: LinearProgressIndicator(
                                                   value: item.maxHp > 0
-                                                      ? item.hp /
-                                                            item.maxHp
+                                                      ? item.hp / item.maxHp
                                                       : 0,
                                                   minHeight: 18,
-                                                  color: Theme.of(context).colorScheme.primaryContainer,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primaryContainer,
                                                   backgroundColor:
-                                                      Theme.of(context).colorScheme
+                                                      Theme.of(context)
+                                                          .colorScheme
                                                           .surfaceContainerHigh,
                                                 ),
                                               ),
@@ -274,56 +315,72 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                         key: ValueKey(
                                                           'hp-${item.name}-${item.maxHp}',
                                                         ),
-                                                        initialValue:
-                                                            item.hp.toString(),
+                                                        initialValue: item.hp
+                                                            .toString(),
                                                         textAlign:
                                                             TextAlign.center,
                                                         decoration:
                                                             const InputDecoration(
-                                                          border:
-                                                              InputBorder.none,
-                                                          isDense: true,
-                                                          contentPadding:
-                                                              EdgeInsets.symmetric(
-                                                            horizontal: 6,
-                                                            vertical: 8,
-                                                          ),
-                                                        ),
-                                                        style: Theme.of(
-                                                          context,
-                                                        ).textTheme.bodySmall?.copyWith(
+                                                              border:
+                                                                  InputBorder
+                                                                      .none,
+                                                              isDense: true,
+                                                              contentPadding:
+                                                                  EdgeInsets.symmetric(
+                                                                    horizontal:
+                                                                        6,
+                                                                    vertical: 8,
+                                                                  ),
+                                                            ),
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .bodySmall
+                                                            ?.copyWith(
                                                               fontWeight:
-                                                                  FontWeight.bold,
-                                                              color: Theme.of(
-                                                                context,
-                                                              ).colorScheme.onPrimaryContainer,
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color: Theme.of(context)
+                                                                  .colorScheme
+                                                                  .onPrimaryContainer,
                                                             ),
                                                         keyboardType:
                                                             const TextInputType.numberWithOptions(
-                                                          signed: false,
-                                                          decimal: false,
+                                                              signed: false,
+                                                              decimal: false,
                                                             ),
                                                         inputFormatters: [
-                                                          FilteringTextInputFormatter.digitsOnly,
-                                                          NumericRangeFormatter(min: 0, max: item.maxHp),
+                                                          FilteringTextInputFormatter
+                                                              .digitsOnly,
+                                                          NumericRangeFormatter(
+                                                            min: 0,
+                                                            max: item.maxHp,
+                                                          ),
                                                         ],
                                                         onChanged: (value) {
-                                                          final parsed = int.tryParse(value);
+                                                          final parsed =
+                                                              int.tryParse(
+                                                                value,
+                                                              );
                                                           if (parsed != null) {
-                                                            appState.setHp(index, parsed);
+                                                            appState.setHp(
+                                                              index,
+                                                              parsed,
+                                                            );
                                                           }
                                                         },
                                                       ),
                                                     ),
                                                     Padding(
                                                       padding:
-                                                          const EdgeInsets.symmetric(horizontal: 4),
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 4,
+                                                          ),
                                                       child: Text(
                                                         '/',
                                                         style: TextStyle(
-                                                          color: Theme.of(
-                                                            context,
-                                                          ).colorScheme.onPrimaryContainer,
+                                                          color: Theme.of(context)
+                                                              .colorScheme
+                                                              .onPrimaryContainer,
                                                           fontWeight:
                                                               FontWeight.bold,
                                                         ),
@@ -334,42 +391,57 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                         key: ValueKey(
                                                           'maxhp-${item.name}',
                                                         ),
-                                                        initialValue: item.maxHp.toString(),
+                                                        initialValue: item.maxHp
+                                                            .toString(),
                                                         textAlign:
                                                             TextAlign.center,
                                                         decoration:
                                                             const InputDecoration(
-                                                          border:
-                                                              InputBorder.none,
-                                                          isDense: true,
-                                                          contentPadding:
-                                                              EdgeInsets.symmetric(
-                                                            horizontal: 6,
-                                                            vertical: 8,
-                                                          ),
-                                                        ),
-                                                        style: Theme.of(
-                                                          context,
-                                                        ).textTheme.bodySmall?.copyWith(
+                                                              border:
+                                                                  InputBorder
+                                                                      .none,
+                                                              isDense: true,
+                                                              contentPadding:
+                                                                  EdgeInsets.symmetric(
+                                                                    horizontal:
+                                                                        6,
+                                                                    vertical: 8,
+                                                                  ),
+                                                            ),
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .bodySmall
+                                                            ?.copyWith(
                                                               fontWeight:
-                                                                  FontWeight.bold,
-                                                              color: Theme.of(
-                                                                context,
-                                                              ).colorScheme.onPrimaryContainer,
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color: Theme.of(context)
+                                                                  .colorScheme
+                                                                  .onPrimaryContainer,
                                                             ),
                                                         keyboardType:
                                                             const TextInputType.numberWithOptions(
-                                                          signed: false,
-                                                          decimal: false,
+                                                              signed: false,
+                                                              decimal: false,
                                                             ),
                                                         inputFormatters: [
-                                                          FilteringTextInputFormatter.digitsOnly,
-                                                          NumericRangeFormatter(min: 1, max: 99999),
+                                                          FilteringTextInputFormatter
+                                                              .digitsOnly,
+                                                          NumericRangeFormatter(
+                                                            min: 1,
+                                                            max: 99999,
+                                                          ),
                                                         ],
                                                         onChanged: (value) {
-                                                          final parsed = int.tryParse(value);
+                                                          final parsed =
+                                                              int.tryParse(
+                                                                value,
+                                                              );
                                                           if (parsed != null) {
-                                                            appState.setMaxHp(index, parsed);
+                                                            appState.setMaxHp(
+                                                              index,
+                                                              parsed,
+                                                            );
                                                           }
                                                         },
                                                       ),
@@ -383,6 +455,23 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                       ],
                                     ),
                                   ],
+                                ),
+                              ),
+                              IconButton(
+                                tooltip:
+                                    'Player visibility: ${_visibilityLabel(item.visibility)}',
+                                icon: Icon(switch (item.visibility) {
+                                  InitiativeVisibility.hidden =>
+                                    Icons.visibility_off_outlined,
+                                  InitiativeVisibility.limited =>
+                                    Icons.visibility_outlined,
+                                  InitiativeVisibility.full => Icons.visibility,
+                                }),
+                                onPressed: () => _showVisibilityMenu(
+                                  context,
+                                  appState,
+                                  index,
+                                  item.visibility,
                                 ),
                               ),
                               IconButton(
@@ -485,20 +574,20 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                       ),
                                       child: timer == 0
                                           ? InkWell(
-                                              onTap: () => appState.startCooldown(
-                                                index,
-                                                chargeIndex,
-                                              ),
-                                              borderRadius: BorderRadius.circular(
-                                                12,
-                                              ),
+                                              onTap: () =>
+                                                  appState.startCooldown(
+                                                    index,
+                                                    chargeIndex,
+                                                  ),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                               child: Container(
                                                 width: 26,
                                                 height: 26,
                                                 decoration: BoxDecoration(
-                                                  color: Theme.of(
-                                                    context,
-                                                  ).colorScheme.surfaceContainerHighest,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .surfaceContainerHighest,
                                                   shape: BoxShape.circle,
                                                 ),
                                                 child: const Icon(
@@ -514,9 +603,8 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                     index,
                                                     chargeIndex,
                                                   ),
-                                              borderRadius: BorderRadius.circular(
-                                                20,
-                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
                                               child: Container(
                                                 width: 26,
                                                 height: 26,
@@ -534,7 +622,8 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                       color: Theme.of(
                                                         context,
                                                       ).colorScheme.onPrimary,
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                     ),
                                                   ),
                                                 ),
@@ -542,6 +631,38 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                             ),
                                     );
                                   }),
+                                  // Toggle circle
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 2,
+                                    ),
+                                    child: InkWell(
+                                      onTap: () =>
+                                          appState.toggleToggleState(index),
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        width: 26,
+                                        height: 26,
+                                        decoration: BoxDecoration(
+                                          color: item.toggleState
+                                              ? Colors.orange
+                                              : Theme.of(context)
+                                                    .colorScheme
+                                                    .surfaceContainerHighest,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          item.toggleState
+                                              ? Icons.circle
+                                              : Icons.circle_outlined,
+                                          size: 16,
+                                          color: item.toggleState
+                                              ? Colors.white
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                   // CD1 circle (cooldown of 1, no timer display)
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -551,21 +672,21 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                         ? InkWell(
                                             onTap: () =>
                                                 appState.startCd1(index),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                             child: Container(
-                                              width: 20,
-                                              height: 20,
+                                              width: 26,
+                                              height: 26,
                                               decoration: BoxDecoration(
-                                                color: Theme.of(
-                                                  context,
-                                                ).colorScheme
+                                                color: Theme.of(context)
+                                                    .colorScheme
                                                     .surfaceContainerHighest,
                                                 shape: BoxShape.circle,
                                               ),
                                               child: const Icon(
                                                 Icons.circle_outlined,
-                                                size: 12,
+                                                size: 16,
                                                 color: Colors.grey,
                                               ),
                                             ),
@@ -573,50 +694,28 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                         : InkWell(
                                             onTap: () =>
                                                 appState.decrementCd1(index),
-                                            borderRadius:
-                                                BorderRadius.circular(20),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
                                             child: Container(
-                                              width: 20,
-                                              height: 20,
+                                              width: 26,
+                                              height: 26,
                                               decoration: BoxDecoration(
-                                                color: Color(0xFF000096),
+                                                color: Colors.cyan,
                                                 shape: BoxShape.circle,
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  item.cd1State.toString(),
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                           ),
-                                  ),
-                                  // Toggle circle
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 2,
-                                    ),
-                                    child: InkWell(
-                                      onTap: () =>
-                                          appState.toggleToggleState(index),
-                                      borderRadius:
-                                          BorderRadius.circular(12),
-                                      child: Container(
-                                        width: 20,
-                                        height: 20,
-                                        decoration: BoxDecoration(
-                                          color: item.toggleState
-                                              ? Color(0xFFFF6700)
-                                              : Theme.of(context)
-                                                  .colorScheme
-                                                  .surfaceContainerHighest,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(
-                                          item.toggleState
-                                              ? Icons.circle
-                                              : Icons.circle_outlined,
-                                          size: 12,
-                                          color: item.toggleState
-                                              ? Color(0xFFFF6700)
-                                              : Colors.grey,
-                                        ),
-                                      ),
-                                    ),
                                   ),
                                 ],
                               ),
@@ -641,4 +740,81 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
       ),
     );
   }
+
+  Future<void> _confirmEndCombat(
+    BuildContext context,
+    InitiativeAppState appState,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('End combat?'),
+        content: const Text(
+          'This clears the shared encounter for all campaign players.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('End combat'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await appState.endEncounter();
+  }
+
+  void _showVisibilityMenu(
+    BuildContext context,
+    InitiativeAppState appState,
+    int index,
+    InitiativeVisibility current,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final visibility in InitiativeVisibility.values)
+              ListTile(
+                leading: Icon(switch (visibility) {
+                  InitiativeVisibility.hidden => Icons.visibility_off,
+                  InitiativeVisibility.limited => Icons.visibility_outlined,
+                  InitiativeVisibility.full => Icons.visibility,
+                }),
+                title: Text(_visibilityLabel(visibility)),
+                subtitle: Text(_visibilityDescription(visibility)),
+                trailing: current == visibility
+                    ? const Icon(Icons.check)
+                    : null,
+                onTap: () {
+                  appState.setVisibility(index, visibility);
+                  Navigator.pop(context);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _visibilityLabel(InitiativeVisibility visibility) =>
+      switch (visibility) {
+        InitiativeVisibility.hidden => 'Hidden',
+        InitiativeVisibility.limited => 'Limited',
+        InitiativeVisibility.full => 'Full',
+      };
+
+  String _visibilityDescription(InitiativeVisibility visibility) =>
+      switch (visibility) {
+        InitiativeVisibility.hidden => 'Not shown to players.',
+        InitiativeVisibility.limited =>
+          'Name, initiative, and a health status label.',
+        InitiativeVisibility.full =>
+          'Exact HP, exhaustion, concentration, reaction, and cooldowns.',
+      };
 }

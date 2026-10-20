@@ -3,6 +3,8 @@ import 'package:uuid/uuid.dart';
 import 'relationship.dart';
 import '../logic/card_sharing_crypto.dart';
 
+const maxSharedCardIconBytes = 5 * 1024 * 1024;
+
 class CueCard {
   final int? id;
   final String? uuid;

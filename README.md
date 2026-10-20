@@ -57,6 +57,16 @@ see each card shared to that campaign. When sharing a card for the first time,
 the app asks which players should receive it. New players do not automatically
 receive previously shared cards; grant access from the campaign or card screen.
 
+Select an active campaign before opening **Initiative Tracker**. Tracker
+changes are published to that campaign in real time. New combatants default to
+**Limited** visibility; use the visibility icon on each row to choose Hidden,
+Limited, or Full. Hidden combatants are omitted entirely. Limited shares name,
+initiative, current-turn marker, and a health label. Full additionally shares
+exact HP, exhaustion, concentration, reaction state, capacity, and cooldowns.
+The shared encounter stays available to players until the DM uses **End
+combat**. The tracker's full DM state remains in memory only and is not restored
+after restarting the desktop app.
+
 ## Run the player web app
 
 The web player has its own entry point (`lib/player/main.dart`). It imports no
@@ -130,7 +140,7 @@ flutter test test/sharing_rls_live_test.dart
 ```
 
 Without all ten environment variables, it is skipped. It verifies
-campaign-owner isolation,
-member/non-member reads, player write denial, DM member removal, revoke
-visibility/events, and rejection of oversized payloads. Run it after every
-policy or migration change and before inviting players.
+campaign-owner isolation, member/non-member reads, player write denial, DM
+member removal, initiative read-only access, revoke visibility/events, and
+rejection of oversized payloads. Run it after every policy or migration change
+and before inviting players.

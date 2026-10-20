@@ -1,86 +1,106 @@
 import 'package:flutter/material.dart';
+
+import 'package:dnd_cuecard_app/logic/supabase_service.dart';
 import 'initiative_item.dart';
 
 class InitiativeAppState extends ChangeNotifier {
+  InitiativeAppState({this.campaignId});
+
+  final String? campaignId;
+  final SupabaseService _supabaseService = SupabaseService();
+
   List<InitiativeItem> initiativeItems = [];
   int currentTurnIndex = 0;
+  bool isSyncing = false;
+  String? syncError;
+  Future<void> _syncQueue = Future<void>.value();
+  bool _isEnding = false;
+  bool _isDisposed = false;
 
   void addInitiativeItem(InitiativeItem item) {
+    final currentItem =
+        initiativeItems.isNotEmpty &&
+            currentTurnIndex >= 0 &&
+            currentTurnIndex < initiativeItems.length
+        ? initiativeItems[currentTurnIndex]
+        : null;
     initiativeItems.add(item);
     initiativeItems.sort((a, b) => b.initiative.compareTo(a.initiative));
-    notifyListeners();
+    if (currentItem != null) {
+      currentTurnIndex = initiativeItems.indexOf(currentItem);
+    }
+    _notifyAndSync();
   }
 
   void removeInitiativeItem(int index) {
+    if (index < 0 || index >= initiativeItems.length) return;
     initiativeItems.removeAt(index);
-    // Adjust current turn index if necessary
     if (initiativeItems.isEmpty) {
       currentTurnIndex = 0;
+    } else if (index < currentTurnIndex) {
+      currentTurnIndex--;
     } else if (currentTurnIndex >= initiativeItems.length) {
       currentTurnIndex = 0;
     }
-    notifyListeners();
+    _notifyAndSync();
   }
 
   void nextTurn() {
     if (initiativeItems.isNotEmpty) {
-      // Move to next person first
       currentTurnIndex = (currentTurnIndex + 1) % initiativeItems.length;
-      // Then tick down the new current person's cooldowns
       initiativeItems[currentTurnIndex].nextTurn();
     }
-    notifyListeners();
+    _notifyAndSync();
   }
 
   void damage(int index, int amount) {
     final item = initiativeItems[index];
     item.hp = (item.hp - amount).clamp(0, item.maxHp);
-    notifyListeners();
+    _notifyAndSync();
   }
 
   void heal(int index, int amount) {
     final item = initiativeItems[index];
     item.hp = (item.hp + amount).clamp(0, item.maxHp);
-    notifyListeners();
+    _notifyAndSync();
   }
 
   void startCooldown(int itemIndex, int chargeIndex) {
     initiativeItems[itemIndex].startCooldown(chargeIndex);
-    notifyListeners();
+    _notifyAndSync();
   }
 
   void decrementCooldown(int itemIndex, int chargeIndex) {
     if (initiativeItems[itemIndex].cooldownTimers[chargeIndex] > 0) {
       initiativeItems[itemIndex].cooldownTimers[chargeIndex]--;
-      notifyListeners();
+      _notifyAndSync();
     }
   }
 
   void setCurrentTurn(int index) {
     if (index >= 0 && index < initiativeItems.length) {
       currentTurnIndex = index;
-      // Tick down the cooldowns for this person's turn
       initiativeItems[currentTurnIndex].nextTurn();
-      notifyListeners();
+      _notifyAndSync();
     }
   }
 
   void incrementExhaustion(int index) {
     final item = initiativeItems[index];
     item.exhaustion = (item.exhaustion + 1).clamp(0, 6);
-    notifyListeners();
+    _notifyAndSync();
   }
 
   void decrementExhaustion(int index) {
     final item = initiativeItems[index];
     item.exhaustion = (item.exhaustion - 1).clamp(0, 6);
-    notifyListeners();
+    _notifyAndSync();
   }
 
   void setHp(int index, int hp) {
     final item = initiativeItems[index];
     item.hp = hp.clamp(0, item.maxHp);
-    notifyListeners();
+    _notifyAndSync();
   }
 
   void setMaxHp(int index, int maxHp) {
@@ -89,21 +109,108 @@ class InitiativeAppState extends ChangeNotifier {
     if (item.hp > item.maxHp) {
       item.hp = item.maxHp;
     }
-    notifyListeners();
+    _notifyAndSync();
   }
 
   void toggleToggleState(int index) {
     initiativeItems[index].toggleToggle();
-    notifyListeners();
+    _notifyAndSync();
   }
 
   void startCd1(int index) {
     initiativeItems[index].startCd1();
-    notifyListeners();
+    _notifyAndSync();
   }
 
   void decrementCd1(int index) {
     initiativeItems[index].decrementCd1();
+    _notifyAndSync();
+  }
+
+  void setVisibility(int index, InitiativeVisibility visibility) {
+    if (index < 0 || index >= initiativeItems.length) return;
+    initiativeItems[index].visibility = visibility;
+    _notifyAndSync();
+  }
+
+  Map<String, dynamic> buildPlayerState() {
+    return {
+      'schema_version': 1,
+      'combatants': [
+        for (var index = 0; index < initiativeItems.length; index++)
+          if (initiativeItems[index].visibility != InitiativeVisibility.hidden)
+            _combatantPlayerState(index, initiativeItems[index]),
+      ],
+    };
+  }
+
+  Map<String, dynamic> _combatantPlayerState(int index, InitiativeItem item) {
+    return {
+      'name': item.name,
+      'initiative': item.initiative,
+      'visibility': item.visibility.name,
+      'health_status': item.healthStatus,
+      'is_current': index == currentTurnIndex,
+      if (item.visibility == InitiativeVisibility.full) ...{
+        'hp': item.hp,
+        'max_hp': item.maxHp,
+        'exhaustion': item.exhaustion,
+        'concentration': item.toggleState,
+        'reaction_used': item.cd1State > 0,
+        'capacity': item.capacity,
+        'cooldown': item.cooldown,
+        'cooldown_timers': item.cooldownTimers,
+      },
+    };
+  }
+
+  Future<void> endEncounter() async {
+    _isEnding = true;
+    await _syncQueue;
+    try {
+      final id = campaignId;
+      if (id != null) {
+        await _supabaseService.clearInitiativeEncounter(id);
+      }
+      initiativeItems.clear();
+      currentTurnIndex = 0;
+      syncError = null;
+    } catch (exception) {
+      syncError = 'Could not end the shared encounter: $exception';
+    } finally {
+      _isEnding = false;
+      if (!_isDisposed) notifyListeners();
+    }
+  }
+
+  void _notifyAndSync() {
     notifyListeners();
+    final id = campaignId;
+    if (id == null || _isEnding) return;
+
+    final playerState = buildPlayerState();
+    _syncQueue = _syncQueue.then((_) async {
+      if (_isDisposed || _isEnding) return;
+      isSyncing = true;
+      notifyListeners();
+      try {
+        await _supabaseService.publishInitiativeEncounter(
+          campaignId: id,
+          playerState: playerState,
+        );
+        syncError = null;
+      } catch (exception) {
+        syncError = 'Could not share initiative with players: $exception';
+      } finally {
+        isSyncing = false;
+        if (!_isDisposed) notifyListeners();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
   }
 }

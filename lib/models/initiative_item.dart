@@ -1,3 +1,5 @@
+enum InitiativeVisibility { hidden, limited, full }
+
 class InitiativeItem {
   String name;
   int initiative;
@@ -9,6 +11,7 @@ class InitiativeItem {
   List<int> cooldownTimers;
   bool toggleState;
   int cd1State;
+  InitiativeVisibility visibility;
 
   InitiativeItem({
     required this.name,
@@ -20,8 +23,16 @@ class InitiativeItem {
     this.maxHp = 0,
     this.toggleState = false,
     this.cd1State = 0,
-  })  : cooldownTimers = List.filled(capacity, 0),
-        assert(hp <= maxHp, 'hp cannot exceed maxHp');
+    this.visibility = InitiativeVisibility.limited,
+  }) : cooldownTimers = List.filled(capacity, 0),
+       assert(hp <= maxHp, 'hp cannot exceed maxHp');
+
+  String get healthStatus {
+    if (hp <= 0) return 'Down';
+    if (maxHp <= 0 || hp * 4 <= maxHp) return 'Near Death';
+    if (hp * 2 <= maxHp) return 'Bloodied';
+    return 'Healthy';
+  }
 
   // To copy for state updates
   InitiativeItem copyWith({
@@ -35,6 +46,7 @@ class InitiativeItem {
     List<int>? cooldownTimers,
     bool? toggleState,
     int? cd1State,
+    InitiativeVisibility? visibility,
   }) {
     return InitiativeItem(
       name: name ?? this.name,
@@ -46,6 +58,7 @@ class InitiativeItem {
       maxHp: maxHp ?? this.maxHp,
       toggleState: toggleState ?? this.toggleState,
       cd1State: cd1State ?? this.cd1State,
+      visibility: visibility ?? this.visibility,
     )..cooldownTimers = cooldownTimers ?? List.from(this.cooldownTimers);
   }
 

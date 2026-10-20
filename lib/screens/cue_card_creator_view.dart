@@ -97,7 +97,10 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
   }
 
   Future<void> _openInitiativeTrackerInNewWindow() async {
-    final args = jsonEncode({'route': 'initiative'});
+    final args = jsonEncode({
+      'route': 'initiative',
+      'campaign_id': context.read<AppState>().activeCampaignId,
+    });
     final controller = await WindowController.create(
       WindowConfiguration(arguments: args),
     );

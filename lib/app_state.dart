@@ -210,6 +210,8 @@ class AppState extends ChangeNotifier {
     if (path == null || path.isEmpty) return null;
     final file = File(path);
     if (!file.existsSync()) return null;
+    final size = file.lengthSync();
+    if (size > maxSharedCardIconBytes) return 'oversized:$size';
     return sha256.convert(file.readAsBytesSync()).toString();
   }
 

@@ -25,27 +25,6 @@ $$;
 
 set local role authenticated;
 
--- Anonymous Auth users are not allowed to read campaign data or join.
-set local "request.jwt.claim.sub" to '66666666-6666-6666-6666-666666666666';
-do $$
-declare
-  visible_count integer;
-begin
-  select count(*) into visible_count from public.campaigns;
-  if visible_count <> 0 then
-    raise exception 'TEST FAILED: anonymous user saw a campaign';
-  end if;
-  begin
-    perform * from public.join_campaign('CAMP01', 'Anonymous');
-    raise exception 'TEST FAILED: anonymous user joined a campaign';
-  exception when raise_exception then
-    if sqlerrm not like '%registered account%' then
-      raise;
-    end if;
-  end;
-end;
-$$;
-
 -- DM A owns Campaign A.
 set local "request.jwt.claim.sub" to '11111111-1111-1111-1111-111111111111';
 insert into public.campaigns (id, dm_id, name, join_code)
@@ -63,6 +42,37 @@ values (
   '99999999-9999-9999-9999-999999999999',
   '{"title": "Fireball"}'::jsonb
 );
+insert into public.initiative_encounters (campaign_id, player_state)
+values (
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  '{"schema_version": 1, "combatants": [{"name": "Guard", "initiative": 12, "visibility": "limited", "health_status": "Healthy", "is_current": true}]}'::jsonb
+);
+
+-- Anonymous Auth users cannot see active campaign data or join.
+set local "request.jwt.claim.sub" to '66666666-6666-6666-6666-666666666666';
+do $$
+declare
+  visible_count integer;
+begin
+  select count(*) into visible_count from public.campaigns;
+  if visible_count <> 0 then
+    raise exception 'TEST FAILED: anonymous user saw a campaign';
+  end if;
+  select count(*) into visible_count from public.initiative_encounters
+  where active;
+  if visible_count <> 0 then
+    raise exception 'TEST FAILED: anonymous user saw initiative';
+  end if;
+  begin
+    perform * from public.join_campaign('CAMP01', 'Anonymous');
+    raise exception 'TEST FAILED: anonymous user joined a campaign';
+  exception when raise_exception then
+    if sqlerrm not like '%registered account%' then
+      raise;
+    end if;
+  end;
+end;
+$$;
 
 -- DM B owns Campaign B and its card.
 set local "request.jwt.claim.sub" to '55555555-5555-5555-5555-555555555555';
@@ -189,6 +199,12 @@ begin
     raise exception 'TEST FAILED: members could not see campaign peers';
   end if;
 
+  select count(*) into visible_count from public.initiative_encounters
+  where campaign_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  if visible_count <> 1 then
+    raise exception 'TEST FAILED: campaign member could not see initiative';
+  end if;
+
   update public.campaigns set name = 'Player write'
   where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
   get diagnostics changed_rows = row_count;
@@ -247,6 +263,14 @@ begin
   get diagnostics changed_rows = row_count;
   if changed_rows <> 0 then
     raise exception 'TEST FAILED: player deleted a shared card';
+  end if;
+
+  update public.initiative_encounters
+  set player_state = '{"combatants":[]}'::jsonb
+  where campaign_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  get diagnostics changed_rows = row_count;
+  if changed_rows <> 0 then
+    raise exception 'TEST FAILED: player updated initiative';
   end if;
 end;
 $$;
@@ -328,6 +352,12 @@ begin
   if visible_count <> 0 then
     raise exception 'TEST FAILED: non-member saw campaign members';
   end if;
+
+  select count(*) into visible_count from public.initiative_encounters
+  where active;
+  if visible_count <> 0 then
+    raise exception 'TEST FAILED: non-member saw initiative';
+  end if;
 end;
 $$;
 
@@ -353,6 +383,24 @@ begin
     and event_type = 'revoked';
   if visible_count <> 1 then
     raise exception 'TEST FAILED: member did not receive a revocation event';
+  end if;
+end;
+$$;
+
+-- Ending combat removes the encounter from the player-readable view.
+set local "request.jwt.claim.sub" to '11111111-1111-1111-1111-111111111111';
+update public.initiative_encounters
+set active = false, player_state = '{"schema_version":1,"combatants":[]}'::jsonb
+where campaign_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+set local "request.jwt.claim.sub" to '22222222-2222-2222-2222-222222222222';
+do $$
+declare
+  visible_count integer;
+begin
+  select count(*) into visible_count from public.initiative_encounters
+  where active;
+  if visible_count <> 0 then
+    raise exception 'TEST FAILED: ended encounter remained visible';
   end if;
 end;
 $$;

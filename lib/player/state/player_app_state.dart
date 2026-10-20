@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/player_shared_card.dart';
+import '../models/player_initiative.dart';
 
 class PlayerAppState extends ChangeNotifier {
   static const _campaignIdKey = 'player_campaign_id';
@@ -19,6 +20,7 @@ class PlayerAppState extends ChangeNotifier {
   String? campaignName;
   String? displayName;
   List<PlayerSharedCard> cards = [];
+  PlayerInitiativeEncounter? initiativeEncounter;
   Map<String, int> lastViewedVersions = {};
   bool isLoading = false;
   String? error;
@@ -51,6 +53,7 @@ class PlayerAppState extends ChangeNotifier {
           await _joinCampaign(joinCode, savedDisplayName);
           await _loadLastViewedVersions();
           await _loadCards();
+          await _loadInitiative();
           _subscribeToCards();
         }
       } else if (currentUser != null &&
@@ -63,6 +66,7 @@ class PlayerAppState extends ChangeNotifier {
         displayName = savedDisplayName;
         await _loadLastViewedVersions();
         await _loadCards();
+        await _loadInitiative();
         _subscribeToCards();
       }
     } catch (exception) {
@@ -89,6 +93,7 @@ class PlayerAppState extends ChangeNotifier {
       await _joinCampaign(code, name);
       await _loadLastViewedVersions();
       await _loadCards();
+      await _loadInitiative();
       _subscribeToCards();
     } catch (exception) {
       error = _friendlyError(exception);
@@ -171,6 +176,31 @@ class PlayerAppState extends ChangeNotifier {
     if (!_isDisposed) notifyListeners();
   }
 
+  Future<void> _loadInitiative() async {
+    final id = campaignId;
+    if (id == null) {
+      initiativeEncounter = null;
+      return;
+    }
+    final row = await _client!
+        .from('initiative_encounters')
+        .select('player_state')
+        .eq('campaign_id', id)
+        .eq('active', true)
+        .maybeSingle();
+    if (row == null) {
+      initiativeEncounter = null;
+      return;
+    }
+    final playerState = row['player_state'];
+    if (playerState is! Map) {
+      throw const FormatException('Invalid shared initiative state.');
+    }
+    initiativeEncounter = PlayerInitiativeEncounter.fromJson(
+      Map<String, dynamic>.from(playerState),
+    );
+  }
+
   void _subscribeToCards() {
     final id = campaignId;
     if (id == null) return;
@@ -199,7 +229,27 @@ class PlayerAppState extends ChangeNotifier {
           ),
           callback: (_) => unawaited(_refreshCardsFromRealtime()),
         )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'initiative_encounters',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'campaign_id',
+            value: id,
+          ),
+          callback: (_) => unawaited(_refreshInitiativeFromRealtime()),
+        )
         .subscribe();
+  }
+
+  Future<void> _refreshInitiativeFromRealtime() async {
+    try {
+      await _loadInitiative();
+    } catch (exception) {
+      error = _friendlyError(exception);
+    }
+    if (!_isDisposed) notifyListeners();
   }
 
   Future<void> _refreshCardsFromRealtime() async {
@@ -228,6 +278,7 @@ class PlayerAppState extends ChangeNotifier {
     campaignName = null;
     displayName = null;
     cards = [];
+    initiativeEncounter = null;
     lastViewedVersions = {};
     await _clearSavedCampaign();
     notifyListeners();
@@ -239,6 +290,7 @@ class PlayerAppState extends ChangeNotifier {
     campaignName = null;
     displayName = null;
     cards = [];
+    initiativeEncounter = null;
     lastViewedVersions = {};
     await _clearSavedCampaign();
     notifyListeners();
@@ -258,6 +310,7 @@ class PlayerAppState extends ChangeNotifier {
     campaignName = null;
     displayName = null;
     cards = [];
+    initiativeEncounter = null;
     lastViewedVersions = {};
     await _clearSavedCampaign();
     notifyListeners();
@@ -272,6 +325,7 @@ class PlayerAppState extends ChangeNotifier {
         await initialize(null);
       } else {
         await _loadCards();
+        await _loadInitiative();
         _subscribeToCards();
       }
     } catch (exception) {

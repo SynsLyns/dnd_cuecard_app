@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/player_shared_card.dart';
+import '../models/player_initiative.dart';
 import '../state/player_app_state.dart';
 
 class PlayerApp extends StatefulWidget {
@@ -419,18 +420,100 @@ class _PlayerAppState extends State<PlayerApp> {
         if (_state.error != null)
           _errorPanel(_state.error!, retry: _state.retry),
         Expanded(
-          child: _state.isLoading && _state.cards.isEmpty
+          child:
+              _state.isLoading &&
+                  _state.cards.isEmpty &&
+                  _state.initiativeEncounter == null
               ? const Center(child: CircularProgressIndicator())
-              : _state.cards.isEmpty
-              ? const Center(child: Text('No cards have been shared yet.'))
-              : ListView.builder(
+              : ListView(
                   padding: const EdgeInsets.only(bottom: 24),
-                  itemCount: _state.cards.length,
-                  itemBuilder: (context, index) =>
-                      _buildCard(_state.cards[index]),
+                  children: [
+                    if (_state.initiativeEncounter?.combatants.isNotEmpty ==
+                        true)
+                      _buildInitiative(_state.initiativeEncounter!),
+                    if (_state.cards.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(
+                          child: Text('No cards have been shared yet.'),
+                        ),
+                      )
+                    else
+                      for (final card in _state.cards) _buildCard(card),
+                  ],
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _buildInitiative(PlayerInitiativeEncounter encounter) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Initiative', style: Theme.of(context).textTheme.titleLarge),
+            for (final combatant in encounter.combatants)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  child: Text(combatant.initiative.toString()),
+                ),
+                title: Row(
+                  children: [
+                    Expanded(child: Text(combatant.name)),
+                    if (combatant.isCurrent)
+                      const Chip(
+                        label: Text('Current turn'),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                  ],
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      Text(
+                        combatant.visibility == 'full' &&
+                                combatant.hp != null &&
+                                combatant.maxHp != null
+                            ? '${combatant.healthStatus} - ${combatant.hp}/${combatant.maxHp} HP'
+                            : combatant.healthStatus,
+                      ),
+                      if (combatant.exhaustion != null)
+                        Text('Exhaustion: ${combatant.exhaustion}'),
+                      if (combatant.concentration != null)
+                        Text(
+                          combatant.concentration!
+                              ? 'Concentration'
+                              : 'Not concentrating',
+                        ),
+                      if (combatant.reactionUsed != null)
+                        Text(
+                          combatant.reactionUsed!
+                              ? 'Reaction used'
+                              : 'Reaction ready',
+                        ),
+                      if (combatant.capacity != null)
+                        Text('Capacity: ${combatant.capacity}'),
+                      if (combatant.cooldownTimers != null)
+                        Text(
+                          'Charges: ${combatant.cooldownTimers!.join(' / ')}',
+                        ),
+                      if (combatant.cooldown != null)
+                        Text('Cooldown: ${combatant.cooldown} turns'),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 

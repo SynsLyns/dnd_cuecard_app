@@ -366,11 +366,24 @@ class SupabaseService {
       final iconPath = '$campaignId/$cardUuid';
       Uint8List? iconBytes;
       String? iconHash;
+      var removeExistingIcon = false;
       if (card.iconFilePath != null && card.iconFilePath!.isNotEmpty) {
         final iconFile = File(card.iconFilePath!);
         if (!await iconFile.exists()) {
           throw CloudSharingException(
             'The selected card icon could not be found: ${card.iconFilePath}',
+          );
+        }
+        final iconSize = await iconFile.length();
+        if (iconSize == 0 || iconSize > maxSharedCardIconBytes) {
+          throw CloudSharingException(
+            'Card icons must be between 1 byte and 5 MiB.',
+          );
+        }
+        final contentType = _imageContentType(card.iconFilePath!);
+        if (contentType == 'application/octet-stream') {
+          throw CloudSharingException(
+            'Card icons must use JPEG, PNG, GIF, WebP, or BMP format.',
           );
         }
         iconBytes = await iconFile.readAsBytes();
@@ -406,7 +419,7 @@ class SupabaseService {
         payload['icon_path'] = iconPath;
       } else {
         payload['icon_path'] = null;
-        await cl.storage.from('shared-card-icons').remove([iconPath]);
+        removeExistingIcon = true;
       }
 
       // Check if row already exists in shared_cards for this campaign & card
@@ -506,6 +519,9 @@ class SupabaseService {
       );
 
       await _database.insertOrUpdateCardShare(shareRecord);
+      if (removeExistingIcon) {
+        await cl.storage.from('shared-card-icons').remove([iconPath]);
+      }
       return shareRecord;
     } catch (e) {
       throw CloudSharingException('Failed to share card: ${e.toString()}', e);
@@ -551,6 +567,55 @@ class SupabaseService {
       await _database.deleteCardShare(cardUuid, campaignId);
     } catch (e) {
       throw CloudSharingException('Failed to unshare card: ${e.toString()}', e);
+    }
+  }
+
+  Future<void> publishInitiativeEncounter({
+    required String campaignId,
+    required Map<String, dynamic> playerState,
+  }) async {
+    final cl = _requireClient();
+    if (currentUser == null) {
+      throw CloudSharingException(
+        'Sign in as the campaign DM to share initiative.',
+      );
+    }
+    try {
+      await cl.from('initiative_encounters').upsert({
+        'campaign_id': campaignId,
+        'active': true,
+        'player_state': playerState,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      });
+    } catch (exception) {
+      throw CloudSharingException(
+        'Failed to share initiative encounter: $exception',
+        exception,
+      );
+    }
+  }
+
+  Future<void> clearInitiativeEncounter(String campaignId) async {
+    final cl = _requireClient();
+    if (currentUser == null) {
+      throw CloudSharingException(
+        'Sign in as the campaign DM to end the shared encounter.',
+      );
+    }
+    try {
+      await cl
+          .from('initiative_encounters')
+          .update({
+            'active': false,
+            'player_state': {'schema_version': 1, 'combatants': []},
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('campaign_id', campaignId);
+    } catch (exception) {
+      throw CloudSharingException(
+        'Failed to end initiative encounter: $exception',
+        exception,
+      );
     }
   }
 

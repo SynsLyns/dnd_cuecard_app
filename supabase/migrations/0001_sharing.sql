@@ -65,6 +65,15 @@ create table public.card_share_events (
 create index idx_card_share_events_campaign_created
   on public.card_share_events (campaign_id, created_at desc);
 
+create table public.initiative_encounters (
+  campaign_id uuid primary key references public.campaigns(id) on delete cascade,
+  active boolean not null default true,
+  player_state jsonb not null,
+  updated_at timestamptz not null default now(),
+  constraint initiative_player_state_size_limit
+    check (octet_length(player_state::text) <= 100000)
+);
+
 insert into storage.buckets (
   id,
   name,
@@ -85,6 +94,7 @@ alter table public.campaign_members enable row level security;
 alter table public.shared_cards enable row level security;
 alter table public.shared_card_recipients enable row level security;
 alter table public.card_share_events enable row level security;
+alter table public.initiative_encounters enable row level security;
 
 -- These narrowly scoped helpers avoid recursive policy checks.
 create function public.is_registered_user()
@@ -216,6 +226,19 @@ create policy "Campaign members can read card share events"
     or public.is_campaign_dm(campaign_id)
   );
 
+create policy "DMs can manage campaign initiative"
+  on public.initiative_encounters
+  for all
+  to authenticated
+  using (public.is_campaign_dm(campaign_id))
+  with check (public.is_campaign_dm(campaign_id));
+
+create policy "Campaign members can read initiative"
+  on public.initiative_encounters
+  for select
+  to authenticated
+  using (public.is_campaign_member(campaign_id));
+
 create policy "DMs manage shared card icons"
   on storage.objects
   for all
@@ -251,7 +274,7 @@ create policy "Players can read assigned shared card icons"
 
 grant select, insert, update, delete
   on public.campaigns, public.campaign_members, public.shared_cards,
-     public.shared_card_recipients
+     public.shared_card_recipients, public.initiative_encounters
   to authenticated;
 grant select on public.card_share_events to authenticated;
 
@@ -396,6 +419,16 @@ begin
       and tablename = 'card_share_events'
   ) then
     alter publication supabase_realtime add table public.card_share_events;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'initiative_encounters'
+  ) then
+    alter publication supabase_realtime add table public.initiative_encounters;
   end if;
 end;
 $$;

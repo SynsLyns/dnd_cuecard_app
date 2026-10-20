@@ -27,13 +27,15 @@ void main(List<String> args) async {
   // Get the current window controller
   final windowController = await WindowController.fromCurrentEngine();
   final arguments = windowController.arguments.isNotEmpty
-    ? jsonDecode(windowController.arguments)
-    : <String, dynamic>{};
+      ? jsonDecode(windowController.arguments)
+      : <String, dynamic>{};
 
   // Run different apps based on the window type
   // TODO: use a enum here instead of stringly typed routes
   if (arguments['route'] == 'initiative') {
-    runApp(const InitiativeTrackerApp());
+    runApp(
+      InitiativeTrackerApp(campaignId: arguments['campaign_id'] as String?),
+    );
   } else {
     runApp(const MyApp());
   }
@@ -41,17 +43,22 @@ void main(List<String> args) async {
 
 /// Build the initiative tracker app for child windows
 class InitiativeTrackerApp extends StatelessWidget {
-  const InitiativeTrackerApp({super.key});
+  const InitiativeTrackerApp({super.key, this.campaignId});
+
+  final String? campaignId;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => InitiativeAppState(),
+      create: (context) => InitiativeAppState(campaignId: campaignId),
       child: MaterialApp(
         title: 'Initiative Tracker',
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal, brightness: Brightness.light),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.teal,
+            brightness: Brightness.light,
+          ),
         ),
         home: const InitiativeTrackerView(),
       ),
@@ -74,7 +81,10 @@ class MyApp extends StatelessWidget {
         title: 'DnD Cue Cards',
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal, brightness: Brightness.light),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.teal,
+            brightness: Brightness.light,
+          ),
         ),
         home: MyHomePage(),
       ),
@@ -104,7 +114,9 @@ class _MyHomePageState extends State<MyHomePage> {
                   children: [
                     if (_isLibraryVisible)
                       Container(
-                        color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHigh,
                         width: constraints.maxWidth / 4,
                         child: CueCardLibraryView(),
                       ),
@@ -116,15 +128,15 @@ class _MyHomePageState extends State<MyHomePage> {
                           icon: Icon(
                             _isLibraryVisible
                                 ? Icons.chevron_left
-                              : Icons.chevron_right,
+                                : Icons.chevron_right,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isLibraryVisible = !_isLibraryVisible;
+                            });
+                          },
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _isLibraryVisible = !_isLibraryVisible;
-                          });
-                        },
-                      ),
-                      ]
+                      ],
                     ),
                   ],
                 ),

@@ -24,12 +24,13 @@ This document tracks technical decisions and defaults agreed upon during the imp
 ## 2. Initiative Tracker Sharing (Phase 7 Defaults)
 
 - **Local Persistence:** `InitiativeAppState` is currently 100% in-memory in the desktop app.
-- **Combatant Visibility:** Three levels: `hidden` (never shared), `limited` (health status label only: Healthy/Bloodied/Near Death/Down, no exact HP), `full` (exact HP/maxHp, exhaustion, cooldowns). Default for new items: `limited`.
+- **Combatant Visibility:** Three levels: `hidden` (never shared), `limited` (name, initiative, current-turn marker, and health status label only: Healthy/Bloodied/Near Death/Down, no exact HP), `full` (all limited fields plus exact HP/maxHp, exhaustion, cooldowns, and states). Default for new items: `limited`.
+- **Health Labels:** `Down` at 0 HP, `Near Death` at 1-25% HP, `Bloodied` above 25% through 50%, and `Healthy` above 50%.
 - **Toggles & Cooldowns:**
   - `toggleState`: Labeled as **Concentration** (orange circle). Shown to players for `full` combatants only.
   - `cd1State`: Labeled as **Reaction Used** (blue circle). Shown to players for `full` combatants only.
   - `capacity`, `cooldown`, `cooldownTimers`: Shown to players for `full` combatants only.
   - `exhaustion`: Shown to players for `full` combatants only.
-- **Encounter State Duration:** Tracker state stays in Supabase until the DM ends combat or explicitly clears it.
+- **Encounter State Duration:** The player-safe projection stays in Supabase until the DM ends combat or explicitly clears it. Full DM state remains in memory only.
 - **Hidden Combatant Turn:** When the current turn belongs to a `hidden` combatant, no highlight is shown to players.
 - **Local Persistence:** Confirmed in-memory only in desktop DM app.

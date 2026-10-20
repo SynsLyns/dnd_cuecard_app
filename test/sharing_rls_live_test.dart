@@ -79,6 +79,21 @@ void main() {
             .select('id')
             .single();
         cardId = insertedCard['id'] as String;
+        await dm.from('initiative_encounters').upsert({
+          'campaign_id': dmCampaignId,
+          'player_state': {
+            'schema_version': 1,
+            'combatants': [
+              {
+                'name': 'Guard',
+                'initiative': 12,
+                'visibility': 'limited',
+                'health_status': 'Healthy',
+                'is_current': true,
+              },
+            ],
+          },
+        });
         iconPath = '$dmCampaignId/$cardUuid';
         final iconBytes = Uint8List.fromList([137, 80, 78, 71]);
         await dm.storage
@@ -164,6 +179,22 @@ void main() {
         expect(
           (joined.first as Map<String, dynamic>)['campaign_id'],
           dmCampaignId,
+        );
+        final memberInitiative = await playerA
+            .from('initiative_encounters')
+            .select('player_state')
+            .eq('campaign_id', dmCampaignId)
+            .single();
+        expect(
+          (memberInitiative['player_state'] as Map)['combatants'],
+          hasLength(1),
+        );
+        expect(
+          await otherDm
+              .from('initiative_encounters')
+              .select('campaign_id')
+              .eq('campaign_id', dmCampaignId),
+          isEmpty,
         );
 
         await playerB.rpc(
@@ -368,6 +399,14 @@ void main() {
           }),
           throwsA(isA<PostgrestException>()),
         );
+        final playerInitiativeWrite = await playerA
+            .from('initiative_encounters')
+            .update({
+              'player_state': {'combatants': []},
+            })
+            .eq('campaign_id', dmCampaignId)
+            .select('campaign_id');
+        expect(playerInitiativeWrite, isEmpty);
         final playerUpdate = await playerA
             .from('shared_cards')
             .update({
@@ -415,6 +454,21 @@ void main() {
         expect(removedMemberCards, isEmpty);
 
         await dm.from('shared_cards').delete().eq('id', cardId);
+        await dm
+            .from('initiative_encounters')
+            .update({
+              'active': false,
+              'player_state': {'schema_version': 1, 'combatants': []},
+            })
+            .eq('campaign_id', dmCampaignId);
+        expect(
+          await playerA
+              .from('initiative_encounters')
+              .select('campaign_id')
+              .eq('campaign_id', dmCampaignId)
+              .eq('active', true),
+          isEmpty,
+        );
         final deletedOwnCard = await dm
             .from('shared_cards')
             .select('id')
