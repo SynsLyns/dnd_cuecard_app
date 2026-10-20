@@ -44,3 +44,7 @@ app.*.map.json
 
 
 /certificates/
+
+# Locally installed agent skills
+/.agents/skills/
+/skills-lock.json
