@@ -1,8 +1,13 @@
+import 'dart:io';
+
+import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/campaign.dart';
 import '../models/card_share.dart';
 import '../models/cue_card.dart';
+import '../models/shared_card_access.dart';
 import 'cue_card_database.dart';
 import 'join_code_generator.dart';
 
@@ -139,6 +144,18 @@ class SupabaseService {
     }
   }
 
+  Future<bool> signInWithGoogle() async {
+    final cl = _requireClient();
+    try {
+      return await cl.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: kIsWeb ? null : 'dndcuecard://login-callback',
+      );
+    } catch (e) {
+      throw CloudSharingException('Google sign-in failed: ${e.toString()}', e);
+    }
+  }
+
   // --- Campaign Methods ---
 
   Future<List<Campaign>> fetchDmCampaigns() async {
@@ -217,6 +234,109 @@ class SupabaseService {
     }
   }
 
+  Future<List<CampaignPlayer>> fetchCampaignPlayers(String campaignId) async {
+    final cl = _requireClient();
+    try {
+      final rows = await cl
+          .from('campaign_members')
+          .select('user_id, display_name')
+          .eq('campaign_id', campaignId)
+          .order('joined_at');
+      return (rows as List<dynamic>)
+          .map(
+            (row) => CampaignPlayer(
+              userId: row['user_id'] as String,
+              displayName: row['display_name'] as String,
+            ),
+          )
+          .toList();
+    } catch (e) {
+      throw CloudSharingException(
+        'Failed to load campaign players: ${e.toString()}',
+        e,
+      );
+    }
+  }
+
+  Future<List<SharedCardAccess>> fetchSharedCardAccess(
+    String campaignId,
+  ) async {
+    final cl = _requireClient();
+    try {
+      final cards = await cl
+          .from('shared_cards')
+          .select('id, source_card_uuid, payload')
+          .eq('campaign_id', campaignId)
+          .eq('revoked', false)
+          .order('shared_at');
+      final recipients = await cl
+          .from('shared_card_recipients')
+          .select('shared_card_id, user_id')
+          .eq('campaign_id', campaignId);
+      final playerIdsByCard = <String, Set<String>>{};
+      for (final recipient in recipients as List<dynamic>) {
+        final row = recipient as Map<String, dynamic>;
+        playerIdsByCard
+            .putIfAbsent(row['shared_card_id'] as String, () => <String>{})
+            .add(row['user_id'] as String);
+      }
+      return (cards as List<dynamic>).map((item) {
+        final row = item as Map<String, dynamic>;
+        final payload = row['payload'];
+        final title = payload is Map ? payload['title'] : null;
+        return SharedCardAccess(
+          id: row['id'] as String,
+          sourceCardUuid: row['source_card_uuid'] as String,
+          title: title is String && title.trim().isNotEmpty
+              ? title
+              : 'Untitled card',
+          playerIds: playerIdsByCard[row['id'] as String] ?? <String>{},
+        );
+      }).toList();
+    } catch (e) {
+      throw CloudSharingException(
+        'Failed to load card sharing access: ${e.toString()}',
+        e,
+      );
+    }
+  }
+
+  Future<void> setCardSharedWithPlayer({
+    required String campaignId,
+    required String sharedCardId,
+    required String playerId,
+    required bool isShared,
+  }) async {
+    final cl = _requireClient();
+    try {
+      if (isShared) {
+        await cl
+            .from('shared_card_recipients')
+            .upsert(
+              {
+                'campaign_id': campaignId,
+                'shared_card_id': sharedCardId,
+                'user_id': playerId,
+              },
+              onConflict: 'shared_card_id,user_id',
+              ignoreDuplicates: true,
+            );
+      } else {
+        await cl
+            .from('shared_card_recipients')
+            .delete()
+            .eq('campaign_id', campaignId)
+            .eq('shared_card_id', sharedCardId)
+            .eq('user_id', playerId);
+      }
+    } catch (e) {
+      throw CloudSharingException(
+        'Failed to update player card access: ${e.toString()}',
+        e,
+      );
+    }
+  }
+
   // --- Card Sharing Methods ---
 
   /// Shares or updates a card in a campaign.
@@ -225,6 +345,7 @@ class SupabaseService {
   Future<CardShare> shareOrPushCard({
     required String campaignId,
     required CueCard card,
+    Set<String>? recipientIds,
     String? typeName,
     int? typeColor,
     String? rarityName,
@@ -235,21 +356,59 @@ class SupabaseService {
     if (cardUuid == null || cardUuid.isEmpty) {
       throw CloudSharingException('Card does not have a valid UUID.');
     }
-
-    final payload = card.toSharedPayload(
-      typeName: typeName,
-      typeColor: typeColor,
-      rarityName: rarityName,
-      rarityColor: rarityColor,
-    );
-    final canonicalHash = card.canonicalHash(
-      typeName: typeName,
-      typeColor: typeColor,
-      rarityName: rarityName,
-      rarityColor: rarityColor,
-    );
+    if (recipientIds != null && recipientIds.isEmpty) {
+      throw CloudSharingException(
+        'Choose at least one player before sharing this card.',
+      );
+    }
 
     try {
+      final iconPath = '$campaignId/$cardUuid';
+      Uint8List? iconBytes;
+      String? iconHash;
+      if (card.iconFilePath != null && card.iconFilePath!.isNotEmpty) {
+        final iconFile = File(card.iconFilePath!);
+        if (!await iconFile.exists()) {
+          throw CloudSharingException(
+            'The selected card icon could not be found: ${card.iconFilePath}',
+          );
+        }
+        iconBytes = await iconFile.readAsBytes();
+        iconHash = sha256.convert(iconBytes).toString();
+      }
+
+      final payload = card.toSharedPayload(
+        typeName: typeName,
+        typeColor: typeColor,
+        rarityName: rarityName,
+        rarityColor: rarityColor,
+        iconHash: iconHash,
+      );
+      final canonicalHash = card.canonicalHash(
+        typeName: typeName,
+        typeColor: typeColor,
+        rarityName: rarityName,
+        rarityColor: rarityColor,
+        iconHash: iconHash,
+      );
+
+      if (iconBytes != null) {
+        await cl.storage
+            .from('shared-card-icons')
+            .uploadBinary(
+              iconPath,
+              iconBytes,
+              fileOptions: FileOptions(
+                upsert: true,
+                contentType: _imageContentType(card.iconFilePath!),
+              ),
+            );
+        payload['icon_path'] = iconPath;
+      } else {
+        payload['icon_path'] = null;
+        await cl.storage.from('shared-card-icons').remove([iconPath]);
+      }
+
       // Check if row already exists in shared_cards for this campaign & card
       final existing = await cl
           .from('shared_cards')
@@ -268,12 +427,20 @@ class SupabaseService {
         final currentVersion = existing['version'] as int;
         pushedVersion = currentVersion + 1;
 
+        if (recipientIds != null) {
+          await cl
+              .from('shared_card_recipients')
+              .delete()
+              .eq('campaign_id', campaignId)
+              .eq('shared_card_id', sharedCardId);
+        }
+
         final updated = await cl
             .from('shared_cards')
             .update({
               'payload': payload,
               'version': pushedVersion,
-              'revoked': false,
+              if (recipientIds == null) 'revoked': false,
               'updated_at': now.toIso8601String(),
             })
             .eq('id', sharedCardId)
@@ -295,7 +462,7 @@ class SupabaseService {
               'payload': payload,
               'schema_version': 1,
               'version': pushedVersion,
-              'revoked': false,
+              'revoked': recipientIds != null,
               'shared_at': now.toIso8601String(),
               'updated_at': now.toIso8601String(),
             })
@@ -303,6 +470,29 @@ class SupabaseService {
             .single();
 
         sharedCardId = inserted['id'] as String;
+      }
+
+      if (recipientIds != null) {
+        await cl.from('shared_card_recipients').insert([
+          for (final userId in recipientIds)
+            {
+              'campaign_id': campaignId,
+              'shared_card_id': sharedCardId,
+              'user_id': userId,
+            },
+        ]);
+
+        final activated = await cl
+            .from('shared_cards')
+            .update({'revoked': false, 'updated_at': now.toIso8601String()})
+            .eq('id', sharedCardId)
+            .select('id')
+            .maybeSingle();
+        if (activated == null) {
+          throw CloudSharingException(
+            'The shared card could not be activated. Check your campaign permissions.',
+          );
+        }
       }
 
       // Record in local card_shares SQLite table
@@ -320,6 +510,18 @@ class SupabaseService {
     } catch (e) {
       throw CloudSharingException('Failed to share card: ${e.toString()}', e);
     }
+  }
+
+  String _imageContentType(String path) {
+    final extension = path.split('.').last.toLowerCase();
+    return switch (extension) {
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'gif' => 'image/gif',
+      'webp' => 'image/webp',
+      'bmp' => 'image/bmp',
+      _ => 'application/octet-stream',
+    };
   }
 
   /// Soft-deletes a shared card by marking revoked = true in Supabase.

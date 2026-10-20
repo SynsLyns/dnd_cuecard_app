@@ -111,3 +111,4 @@ msix_config:
   capabilities: nothing
   certificate_path: C:\Users\Bill\repos\dnd_cuecard_app\certificates\CERTIFICATE.pfx
   certificate_password: abc123
+  protocol_activation: dndcuecard

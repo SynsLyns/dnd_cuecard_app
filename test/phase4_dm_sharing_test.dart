@@ -140,5 +140,21 @@ void main() {
         );
       },
     );
+
+    test('first share requires at least one selected player', () async {
+      final appState = AppState()..setActiveCampaign('camp-1111');
+      final card = CueCard(
+        uuid: 'card-uuid-first-share',
+        title: 'Magic Missile',
+        type: 1,
+        rarity: 1,
+      );
+
+      await expectLater(appState.shareCard(card), throwsA(isA<Exception>()));
+      await expectLater(
+        appState.shareCard(card, recipientIds: {}),
+        throwsA(isA<Exception>()),
+      );
+    });
   });
 }

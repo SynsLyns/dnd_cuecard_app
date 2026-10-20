@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -12,13 +13,23 @@ void main() {
   final otherDmEmail = Platform.environment['SUPABASE_TEST_OTHER_DM_EMAIL'];
   final otherDmPassword =
       Platform.environment['SUPABASE_TEST_OTHER_DM_PASSWORD'];
+  final playerEmail = Platform.environment['SUPABASE_TEST_PLAYER_EMAIL'];
+  final playerPassword = Platform.environment['SUPABASE_TEST_PLAYER_PASSWORD'];
+  final otherPlayerEmail =
+      Platform.environment['SUPABASE_TEST_OTHER_PLAYER_EMAIL'];
+  final otherPlayerPassword =
+      Platform.environment['SUPABASE_TEST_OTHER_PLAYER_PASSWORD'];
   final missingConfiguration =
       url == null ||
       anonKey == null ||
       dmEmail == null ||
       dmPassword == null ||
       otherDmEmail == null ||
-      otherDmPassword == null;
+      otherDmPassword == null ||
+      playerEmail == null ||
+      playerPassword == null ||
+      otherPlayerEmail == null ||
+      otherPlayerPassword == null;
 
   test(
     'live Supabase RLS permits only campaign owners and members',
@@ -27,11 +38,12 @@ void main() {
       final otherDm = SupabaseClient(url, anonKey);
       final playerA = SupabaseClient(url, anonKey);
       final playerB = SupabaseClient(url, anonKey);
-      final nonMember = SupabaseClient(url, anonKey);
 
       String? dmCampaignId;
       String? otherCampaignId;
       String? cardId;
+      String? iconPath;
+      var iconUploaded = false;
 
       try {
         await dm.auth.signInWithPassword(
@@ -41,6 +53,14 @@ void main() {
         await otherDm.auth.signInWithPassword(
           email: otherDmEmail!,
           password: otherDmPassword!,
+        );
+        await playerA.auth.signInWithPassword(
+          email: playerEmail!,
+          password: playerPassword!,
+        );
+        await playerB.auth.signInWithPassword(
+          email: otherPlayerEmail!,
+          password: otherPlayerPassword!,
         );
 
         final dmCampaign = await _createCampaign(dm, 'Live RLS A');
@@ -59,6 +79,23 @@ void main() {
             .select('id')
             .single();
         cardId = insertedCard['id'] as String;
+        iconPath = '$dmCampaignId/$cardUuid';
+        final iconBytes = Uint8List.fromList([137, 80, 78, 71]);
+        await dm.storage
+            .from('shared-card-icons')
+            .uploadBinary(
+              iconPath,
+              iconBytes,
+              fileOptions: const FileOptions(
+                contentType: 'image/png',
+                upsert: true,
+              ),
+            );
+        iconUploaded = true;
+        await expectLater(
+          playerA.storage.from('shared-card-icons').download(iconPath),
+          throwsA(isA<StorageException>()),
+        );
 
         final otherCard = await otherDm
             .from('shared_cards')
@@ -114,7 +151,6 @@ void main() {
           throwsA(isA<PostgrestException>()),
         );
 
-        await playerA.auth.signInAnonymously();
         final joined =
             await playerA.rpc(
                   'join_campaign',
@@ -130,12 +166,71 @@ void main() {
           dmCampaignId,
         );
 
-        await playerB.auth.signInAnonymously();
         await playerB.rpc(
           'join_campaign',
           params: {'code': dmCampaign['join_code'], 'display_name': 'Player B'},
         );
-        await nonMember.auth.signInAnonymously();
+
+        final playerAId = playerA.auth.currentUser!.id;
+        final playerBId = playerB.auth.currentUser!.id;
+        final hiddenBeforeSelection = await playerA
+            .from('shared_cards')
+            .select('id')
+            .eq('id', cardId);
+        expect(hiddenBeforeSelection, isEmpty);
+        await dm.from('shared_card_recipients').insert([
+          {
+            'campaign_id': dmCampaignId,
+            'shared_card_id': cardId,
+            'user_id': playerAId,
+          },
+          {
+            'campaign_id': dmCampaignId,
+            'shared_card_id': cardId,
+            'user_id': playerBId,
+          },
+        ]);
+        expect(
+          await playerA.storage.from('shared-card-icons').download(iconPath),
+          equals(iconBytes),
+        );
+
+        final sharedAfterPlayersJoined = await dm
+            .from('shared_cards')
+            .insert({
+              'campaign_id': dmCampaignId,
+              'source_card_uuid': const Uuid().v4(),
+              'payload': {'title': 'Shared after players joined'},
+            })
+            .select('id')
+            .single();
+        final newlySharedCardId = sharedAfterPlayersJoined['id'] as String;
+        final newCardVisibleToA = await playerA
+            .from('shared_cards')
+            .select('id')
+            .eq('id', newlySharedCardId);
+        final newCardVisibleToB = await playerB
+            .from('shared_cards')
+            .select('id')
+            .eq('id', newlySharedCardId);
+        expect(newCardVisibleToA, isEmpty);
+        expect(newCardVisibleToB, isEmpty);
+        await dm.from('shared_card_recipients').insert({
+          'campaign_id': dmCampaignId,
+          'shared_card_id': newlySharedCardId,
+          'user_id': playerAId,
+        });
+        final newCardGrantedToA = await playerA
+            .from('shared_cards')
+            .select('id')
+            .eq('id', newlySharedCardId);
+        final newCardStillHiddenFromB = await playerB
+            .from('shared_cards')
+            .select('id')
+            .eq('id', newlySharedCardId);
+        expect(newCardGrantedToA, hasLength(1));
+        expect(newCardStillHiddenFromB, isEmpty);
+        await dm.from('shared_cards').delete().eq('id', newlySharedCardId);
 
         final memberCards = await playerA
             .from('shared_cards')
@@ -143,6 +238,49 @@ void main() {
             .eq('campaign_id', dmCampaignId)
             .eq('revoked', false);
         expect(memberCards, hasLength(1));
+        await dm
+            .from('shared_card_recipients')
+            .delete()
+            .eq('campaign_id', dmCampaignId)
+            .eq('shared_card_id', cardId)
+            .eq('user_id', playerAId);
+        final hiddenFromPlayerA = await playerA
+            .from('shared_cards')
+            .select('id')
+            .eq('id', cardId);
+        expect(hiddenFromPlayerA, isEmpty);
+        await expectLater(
+          playerA.storage.from('shared-card-icons').download(iconPath),
+          throwsA(isA<StorageException>()),
+        );
+        final stillVisibleToPlayerB = await playerB
+            .from('shared_cards')
+            .select('id')
+            .eq('id', cardId);
+        expect(stillVisibleToPlayerB, hasLength(1));
+        await expectLater(
+          playerA.from('shared_card_recipients').insert({
+            'campaign_id': dmCampaignId,
+            'shared_card_id': cardId,
+            'user_id': playerAId,
+          }),
+          throwsA(isA<PostgrestException>()),
+        );
+        await dm.from('shared_card_recipients').upsert({
+          'campaign_id': dmCampaignId,
+          'shared_card_id': cardId,
+          'user_id': playerAId,
+        });
+        expect(
+          await playerA.storage.from('shared-card-icons').download(iconPath),
+          equals(iconBytes),
+        );
+        final restoredForPlayerA = await playerA
+            .from('shared_cards')
+            .select('id')
+            .eq('id', cardId);
+        expect(restoredForPlayerA, hasLength(1));
+
         final memberCampaign = await playerA
             .from('campaigns')
             .select('id')
@@ -168,21 +306,19 @@ void main() {
             .eq('campaign_id', dmCampaignId);
         expect(memberList, hasLength(2));
 
-        final nonMemberCards = await nonMember
+        final nonMemberCards = await otherDm
             .from('shared_cards')
             .select('id')
             .eq('campaign_id', dmCampaignId);
         expect(nonMemberCards, isEmpty);
-        final nonMemberCampaigns = await nonMember
-            .from('campaigns')
-            .select('id');
+        final nonMemberCampaigns = await otherDm.from('campaigns').select('id');
         expect(nonMemberCampaigns, isEmpty);
-        final nonMemberMembers = await nonMember
+        final nonMemberMembers = await otherDm
             .from('campaign_members')
             .select('user_id')
             .eq('campaign_id', dmCampaignId);
         expect(nonMemberMembers, isEmpty);
-        final nonMemberEvents = await nonMember
+        final nonMemberEvents = await otherDm
             .from('card_share_events')
             .select('id')
             .eq('campaign_id', dmCampaignId);
@@ -251,6 +387,10 @@ void main() {
             .from('shared_cards')
             .update({'revoked': true})
             .eq('id', cardId);
+        await expectLater(
+          playerA.storage.from('shared-card-icons').download(iconPath),
+          throwsA(isA<StorageException>()),
+        );
         final visibleRevokedCard = await playerA
             .from('shared_cards')
             .select('id')
@@ -259,7 +399,8 @@ void main() {
         final revocationEvent = await playerA
             .from('card_share_events')
             .select('shared_card_id')
-            .eq('shared_card_id', cardId);
+            .eq('shared_card_id', cardId)
+            .eq('event_type', 'revoked');
         expect(revocationEvent, hasLength(1));
 
         await dm
@@ -280,6 +421,9 @@ void main() {
             .eq('id', cardId);
         expect(deletedOwnCard, isEmpty);
       } finally {
+        if (iconUploaded && iconPath != null) {
+          await dm.storage.from('shared-card-icons').remove([iconPath]);
+        }
         if (dmCampaignId != null) {
           await dm.from('campaigns').delete().eq('id', dmCampaignId);
         }
@@ -291,12 +435,11 @@ void main() {
           otherDm.dispose(),
           playerA.dispose(),
           playerB.dispose(),
-          nonMember.dispose(),
         ]);
       }
     },
     skip: missingConfiguration
-        ? 'Set SUPABASE_TEST_URL, SUPABASE_TEST_ANON_KEY, and both DM test accounts to run live RLS checks.'
+        ? 'Set the Supabase URL/key and both DM and player test accounts to run live RLS checks.'
         : false,
   );
 }

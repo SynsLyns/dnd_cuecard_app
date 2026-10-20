@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dnd_cuecard_app/widgets/cue_card/hoverable_cue_card.dart';
 import 'campaign_management_dialog.dart';
+import 'campaign_player_selection_dialog.dart';
 
 class CueCardLibraryView extends StatefulWidget {
   const CueCardLibraryView({super.key});
@@ -165,7 +166,32 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
     setState(() => _isSharingSelection = true);
     try {
       final cards = await appState.getCardsByIds(_selectedCardIds);
-      final result = await appState.shareCards(cards);
+      if (!mounted) return;
+      final cardsNeedingRecipients = cards
+          .where(
+            (card) =>
+                appState.getCardShareStatus(card) == CardShareStatus.notShared,
+          )
+          .toList();
+      Set<String>? recipientIds;
+      if (cardsNeedingRecipients.isNotEmpty) {
+        final campaign = appState.activeCampaign;
+        if (campaign == null) {
+          throw CloudSharingException('No campaign selected.');
+        }
+        recipientIds = await showCampaignPlayerSelectionDialog(
+          context,
+          campaign: campaign,
+          cardTitle: cardsNeedingRecipients.length == 1
+              ? cardsNeedingRecipients.single.title ?? 'Untitled'
+              : '${cardsNeedingRecipients.length} selected cards',
+        );
+        if (recipientIds == null) return;
+      }
+      final result = await appState.shareCards(
+        cards,
+        recipientIds: recipientIds,
+      );
       if (mounted) {
         await _showBatchResult('Share selected cards', result);
         setState(() {

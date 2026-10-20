@@ -17,6 +17,8 @@ import '../models/rarity.dart';
 import '../widgets/card_options.dart';
 import '../widgets/cue_card/cue_card_view.dart';
 import 'campaign_management_dialog.dart';
+import 'campaign_player_access_dialog.dart';
+import 'campaign_player_selection_dialog.dart';
 
 class CueCardCreatorView extends StatefulWidget {
   const CueCardCreatorView({super.key});
@@ -66,7 +68,7 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
           orElse: () => Rarity(id: -1, name: 'Unknown', color: Colors.white),
         );
       });
-    } else if (_selectedCard != null)  {
+    } else if (_selectedCard != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         clearCueCard();
       });
@@ -87,7 +89,7 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
     });
   }
 
-  void _viewCard(CueCard card,) {
+  void _viewCard(CueCard card) {
     setState(() {
       _selectedTab = 0;
     });
@@ -97,9 +99,7 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
   Future<void> _openInitiativeTrackerInNewWindow() async {
     final args = jsonEncode({'route': 'initiative'});
     final controller = await WindowController.create(
-      WindowConfiguration(
-        arguments: args,
-      ),
+      WindowConfiguration(arguments: args),
     );
     await controller.show();
   }
@@ -130,8 +130,14 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
               context.read<AppState>().isRelationshipMode = index == 1;
             },
             children: const [
-              Padding(padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8), child: Text('Cards')),
-              Padding(padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8), child: Text('Relationships')),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Text('Cards'),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Text('Relationships'),
+              ),
             ],
           ),
           const Spacer(),
@@ -184,7 +190,10 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
             padding: EdgeInsets.all(minConstraint * 0.04),
             child: Column(
               children: [
-                _buildCueCardView(minConstraint: minConstraint * 0.66, readOnly: !_isEditMode),
+                _buildCueCardView(
+                  minConstraint: minConstraint * 0.66,
+                  readOnly: !_isEditMode,
+                ),
                 SizedBox(height: minConstraint * 0.02),
                 _buildCardOptions(minConstraint),
                 SizedBox(height: minConstraint * 0.02),
@@ -221,7 +230,9 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
     final appState = context.watch<AppState>();
     final hasActiveCampaign = appState.activeCampaignId != null;
     final selectedCard = _selectedCard;
-    final shareStatus = selectedCard != null ? appState.getCardShareStatus(selectedCard) : CardShareStatus.notShared;
+    final shareStatus = selectedCard != null
+        ? appState.getCardShareStatus(selectedCard)
+        : CardShareStatus.notShared;
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: minConstraint * 0.11),
@@ -251,25 +262,42 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
                 shareStatus == CardShareStatus.changesNotPushed
                     ? Icons.cloud_upload
                     : shareStatus == CardShareStatus.upToDate
-                        ? Icons.check_circle_outline
-                        : Icons.share,
+                    ? Icons.check_circle_outline
+                    : Icons.share,
                 size: 18,
               ),
               label: Text(
                 shareStatus == CardShareStatus.changesNotPushed
                     ? 'Push Update'
                     : shareStatus == CardShareStatus.upToDate
-                        ? 'Shared (Up to date)'
-                        : 'Share to Players',
+                    ? 'Shared (Up to date)'
+                    : 'Share to Players',
               ),
               onPressed: shareStatus == CardShareStatus.upToDate
                   ? null
                   : () async {
                       try {
-                        await appState.shareCard(selectedCard);
+                        Set<String>? recipientIds;
+                        if (shareStatus == CardShareStatus.notShared) {
+                          final campaign = appState.activeCampaign;
+                          if (campaign == null) return;
+                          recipientIds =
+                              await showCampaignPlayerSelectionDialog(
+                                context,
+                                campaign: campaign,
+                                cardTitle: selectedCard.title ?? 'Untitled',
+                              );
+                          if (recipientIds == null) return;
+                        }
+                        await appState.shareCard(
+                          selectedCard,
+                          recipientIds: recipientIds,
+                        );
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Card synced with players!')),
+                            const SnackBar(
+                              content: Text('Card synced with players!'),
+                            ),
                           );
                         }
                       } catch (e) {
@@ -285,6 +313,20 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
                       }
                     },
             ),
+            if (shareStatus != CardShareStatus.notShared &&
+                selectedCard.uuid != null &&
+                appState.activeCampaign != null)
+              IconButton(
+                tooltip: 'Manage player access for this card',
+                icon: const Icon(Icons.people_outline),
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (context) => CampaignPlayerAccessDialog(
+                    campaign: appState.activeCampaign!,
+                    sourceCardUuid: selectedCard.uuid,
+                  ),
+                ),
+              ),
           ],
         ],
       ),
@@ -328,7 +370,10 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
     );
   }
 
-  Widget _buildCueCardView({required double minConstraint, bool readOnly = false}) {
+  Widget _buildCueCardView({
+    required double minConstraint,
+    bool readOnly = false,
+  }) {
     return SizedBox(
       width: minConstraint / 0.5625,
       height: minConstraint,

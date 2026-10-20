@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dnd_cuecard_app/app_state.dart';
 import 'package:dnd_cuecard_app/logic/supabase_service.dart';
+import 'package:dnd_cuecard_app/screens/campaign_player_selection_dialog.dart';
 import 'package:dnd_cuecard_app/models/cue_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -88,7 +89,15 @@ class _HoverableCueCardState extends State<HoverableCueCard> {
   Future<void> _shareCard(AppState appState) async {
     setState(() => _isSharing = true);
     try {
-      await appState.shareCard(widget.cueCard);
+      final campaign = appState.activeCampaign;
+      if (campaign == null) return;
+      final recipientIds = await showCampaignPlayerSelectionDialog(
+        context,
+        campaign: campaign,
+        cardTitle: widget.cueCard.title ?? 'Untitled',
+      );
+      if (recipientIds == null) return;
+      await appState.shareCard(widget.cueCard, recipientIds: recipientIds);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Card shared to campaign!')),

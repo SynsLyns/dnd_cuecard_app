@@ -10,6 +10,7 @@ class PlayerAppState extends ChangeNotifier {
   static const _campaignIdKey = 'player_campaign_id';
   static const _campaignNameKey = 'player_campaign_name';
   static const _displayNameKey = 'player_display_name';
+  static const _userIdKey = 'player_user_id';
 
   final SupabaseClient? _client;
   final SharedPreferencesAsync _preferences = SharedPreferencesAsync();
@@ -35,15 +36,25 @@ class PlayerAppState extends ChangeNotifier {
       final savedCampaignName = await _preferences.getString(_campaignNameKey);
       final savedDisplayName = await _preferences.getString(_displayNameKey);
       final currentUser = _client.auth.currentUser;
+      final savedUserId = await _preferences.getString(_userIdKey);
+
+      if (currentUser != null &&
+          savedUserId != null &&
+          savedUserId != currentUser.id) {
+        await _clearSavedCampaign();
+      }
 
       if (joinCode != null && joinCode.trim().isNotEmpty) {
-        if (currentUser != null && savedDisplayName != null) {
+        if (currentUser != null &&
+            savedUserId == currentUser.id &&
+            savedDisplayName != null) {
           await _joinCampaign(joinCode, savedDisplayName);
           await _loadLastViewedVersions();
           await _loadCards();
           _subscribeToCards();
         }
       } else if (currentUser != null &&
+          savedUserId == currentUser.id &&
           savedCampaignId != null &&
           savedCampaignName != null &&
           savedDisplayName != null) {
@@ -73,7 +84,7 @@ class PlayerAppState extends ChangeNotifier {
     notifyListeners();
     try {
       if (_client.auth.currentUser == null) {
-        await _client.auth.signInAnonymously();
+        throw const AuthException('Sign in before joining a campaign.');
       }
       await _joinCampaign(code, name);
       await _loadLastViewedVersions();
@@ -116,6 +127,7 @@ class PlayerAppState extends ChangeNotifier {
     await _preferences.setString(_campaignIdKey, joinedCampaignId);
     await _preferences.setString(_campaignNameKey, joinedCampaignName);
     await _preferences.setString(_displayNameKey, name.trim());
+    await _preferences.setString(_userIdKey, _client.auth.currentUser!.id);
   }
 
   Future<void> _loadCards() async {
@@ -129,12 +141,33 @@ class PlayerAppState extends ChangeNotifier {
         .eq('campaign_id', id)
         .eq('revoked', false)
         .order('updated_at', ascending: false);
-    cards = (response as List<dynamic>)
+    final loadedCards = (response as List<dynamic>)
         .map(
           (row) =>
               PlayerSharedCard.fromMap(Map<String, dynamic>.from(row as Map)),
         )
         .toList();
+    cards = await Future.wait(
+      loadedCards.map((card) async {
+        final iconPath = card.payload['icon_path'];
+        if (iconPath is! String || iconPath.isEmpty) return card;
+        try {
+          final iconBytes = await _client.storage
+              .from('shared-card-icons')
+              .download(iconPath);
+          return PlayerSharedCard(
+            id: card.id,
+            version: card.version,
+            schemaVersion: card.schemaVersion,
+            payload: card.payload,
+            iconBytes: iconBytes,
+          );
+        } catch (exception) {
+          error = _friendlyError(exception);
+          return card;
+        }
+      }),
+    );
     if (!_isDisposed) notifyListeners();
   }
 
@@ -196,9 +229,37 @@ class PlayerAppState extends ChangeNotifier {
     displayName = null;
     cards = [];
     lastViewedVersions = {};
+    await _clearSavedCampaign();
+    notifyListeners();
+  }
+
+  Future<void> handleSignedOut() async {
+    await _removeSubscription();
+    campaignId = null;
+    campaignName = null;
+    displayName = null;
+    cards = [];
+    lastViewedVersions = {};
+    await _clearSavedCampaign();
+    notifyListeners();
+  }
+
+  Future<void> _clearSavedCampaign() async {
     await _preferences.remove(_campaignIdKey);
     await _preferences.remove(_campaignNameKey);
     await _preferences.remove(_displayNameKey);
+    await _preferences.remove(_userIdKey);
+  }
+
+  Future<void> signOut() async {
+    await _removeSubscription();
+    await _client?.auth.signOut();
+    campaignId = null;
+    campaignName = null;
+    displayName = null;
+    cards = [];
+    lastViewedVersions = {};
+    await _clearSavedCampaign();
     notifyListeners();
   }
 

@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../app_state.dart';
 import '../config/supabase_config.dart';
 import '../logic/supabase_service.dart';
+import '../models/campaign.dart';
+import 'campaign_player_access_dialog.dart';
 
 class CampaignManagementDialog extends StatefulWidget {
   const CampaignManagementDialog({super.key});
@@ -15,6 +20,7 @@ class CampaignManagementDialog extends StatefulWidget {
 
 class _CampaignManagementDialogState extends State<CampaignManagementDialog> {
   final _supabaseService = SupabaseService();
+  StreamSubscription<AuthState>? _authSubscription;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -34,7 +40,22 @@ class _CampaignManagementDialogState extends State<CampaignManagementDialog> {
   bool _showConfig = false;
 
   @override
+  void initState() {
+    super.initState();
+    _authSubscription = _supabaseService.authStateChanges?.listen((state) {
+      if (state.event == AuthChangeEvent.signedIn && mounted) {
+        unawaited(context.read<AppState>().loadCampaigns());
+        setState(() {
+          _errorMessage = null;
+          _infoMessage = 'Signed in successfully.';
+        });
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    unawaited(_authSubscription?.cancel());
     _emailController.dispose();
     _passwordController.dispose();
     _campaignNameController.dispose();
@@ -120,18 +141,40 @@ class _CampaignManagementDialogState extends State<CampaignManagementDialog> {
     setState(() => _isLoading = true);
     _setMessage();
     try {
-      await _supabaseService.signUpWithPassword(
+      final response = await _supabaseService.signUpWithPassword(
         email: email,
         password: password,
       );
       if (mounted) {
         await context.read<AppState>().loadCampaigns();
       }
-      _setMessage(info: 'Account registered. You may now sign in.');
+      _setMessage(
+        info: response.session == null
+            ? 'Account registered. Check your email to confirm, then sign in.'
+            : 'Account registered and signed in.',
+      );
     } catch (e) {
       _setMessage(error: CloudSharingException.userMessage(e));
     } finally {
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+    _setMessage();
+    try {
+      final launched = await _supabaseService.signInWithGoogle();
+      if (!launched) {
+        throw CloudSharingException(
+          'The Google sign-in page could not be opened.',
+        );
+      }
+      _setMessage(info: 'Complete Google sign-in in your browser.');
+    } catch (e) {
+      _setMessage(error: CloudSharingException.userMessage(e));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -206,6 +249,13 @@ class _CampaignManagementDialogState extends State<CampaignManagementDialog> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('$label copied to clipboard!')));
+  }
+
+  Future<void> _managePlayerAccess(Campaign campaign) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => CampaignPlayerAccessDialog(campaign: campaign),
+    );
   }
 
   @override
@@ -402,6 +452,12 @@ class _CampaignManagementDialogState extends State<CampaignManagementDialog> {
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _isLoading ? null : _signInWithGoogle,
+            icon: const Icon(Icons.login),
+            label: const Text('Continue with Google'),
+          ),
         ],
       ),
     );
@@ -519,6 +575,14 @@ class _CampaignManagementDialogState extends State<CampaignManagementDialog> {
                           secondary: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.people_alt_outlined,
+                                  size: 20,
+                                ),
+                                tooltip: 'Manage player card access',
+                                onPressed: () => _managePlayerAccess(campaign),
+                              ),
                               IconButton(
                                 icon: const Icon(Icons.link, size: 20),
                                 tooltip: 'Copy Player Link',

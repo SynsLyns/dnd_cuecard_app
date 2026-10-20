@@ -10,10 +10,10 @@ This document tracks technical decisions and defaults agreed upon during the imp
 - **Source of Truth:** DM's local SQLite database remains the sole source of truth. Publishing is one-way (copy pushed to cloud; no two-way sync).
 - **Campaign as Durable Unit:** Sharing is scoped to a `Campaign` (with DM owner, members, and shared cards).
 - **Snapshot Sharing:** Updates are explicit snapshots pushed by the DM via a "Push update" button. Players' cards do not silently mutate.
-- **Player Auth:** Anonymous authentication + display name via join code. DM uses email auth.
+- **Player Auth:** Every DM and player must use a registered email/password or Google account. The player adds a display name when joining with a campaign code. Anonymous authentication is disabled.
 - **Card Fields in Shared Payload:**
   - `notes`: **Included** (confirmed by human).
-  - `iconFilePath`: **Omitted for v1** (local file paths are not portable; image upload deferred to Phase 8).
+  - `iconFilePath`: Local paths are not shared. The DM uploads the image to the private Supabase Storage bucket; the player downloads it only when granted card access.
   - `relationship`: **Omitted for v1** (confirmed by human).
   - `player edits`: **Read-only** (players cannot modify cards; player notes deferred).
   - `box1` / `box2`: **Included** as free text.
@@ -33,4 +33,3 @@ This document tracks technical decisions and defaults agreed upon during the imp
 - **Encounter State Duration:** Tracker state stays in Supabase until the DM ends combat or explicitly clears it.
 - **Hidden Combatant Turn:** When the current turn belongs to a `hidden` combatant, no highlight is shown to players.
 - **Local Persistence:** Confirmed in-memory only in desktop DM app.
-

@@ -97,7 +97,9 @@ class CueCard {
       box2: map['box2'] as String?,
       notes: map['notes'] as String?,
       tags: tags,
-      dateCreated: map['date_created'] != null ? DateTime.parse(map['date_created'] as String) : null,
+      dateCreated: map['date_created'] != null
+          ? DateTime.parse(map['date_created'] as String)
+          : null,
       type: map['type'] as int?,
       rarity: map['rarity'] as int?,
       iconFilePath: map['icon'] as String?,
@@ -110,6 +112,7 @@ class CueCard {
     int? typeColor,
     String? rarityName,
     int? rarityColor,
+    String? iconHash,
   }) {
     return {
       'schema_version': 1,
@@ -128,6 +131,7 @@ class CueCard {
       'rarity_color': ?rarityColor,
       'tags': tags.map((t) => t.name).toList(),
       'date_created': dateCreated?.toIso8601String(),
+      'icon_hash': ?iconHash,
     };
   }
 
@@ -136,13 +140,17 @@ class CueCard {
     int? typeColor,
     String? rarityName,
     int? rarityColor,
+    String? iconHash,
   }) {
-    return computeCanonicalHash(toSharedPayload(
-      typeName: typeName,
-      typeColor: typeColor,
-      rarityName: rarityName,
-      rarityColor: rarityColor,
-    ));
+    return computeCanonicalHash(
+      toSharedPayload(
+        typeName: typeName,
+        typeColor: typeColor,
+        rarityName: rarityName,
+        rarityColor: rarityColor,
+        iconHash: iconHash,
+      ),
+    );
   }
 
   @override

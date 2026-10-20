@@ -1,4 +1,4 @@
--- Run after all sharing migrations in a disposable Supabase project or test DB.
+-- Run after the sharing schema in a disposable Supabase project or test DB.
 -- The transaction rolls back all fixtures. Distinct JWT subjects exercise RLS.
 begin;
 
@@ -9,17 +9,42 @@ declare
     '22222222-2222-2222-2222-222222222222'::uuid,
     '33333333-3333-3333-3333-333333333333'::uuid,
     '44444444-4444-4444-4444-444444444444'::uuid,
-    '55555555-5555-5555-5555-555555555555'::uuid
+    '55555555-5555-5555-5555-555555555555'::uuid,
+    '66666666-6666-6666-6666-666666666666'::uuid
   ];
 begin
   insert into auth.users (id, email)
   select user_id, user_id::text || '@sharing-test.invalid'
   from unnest(test_users) as user_id
   on conflict (id) do nothing;
+  update auth.users
+  set is_anonymous = true
+  where id = '66666666-6666-6666-6666-666666666666';
 end;
 $$;
 
 set local role authenticated;
+
+-- Anonymous Auth users are not allowed to read campaign data or join.
+set local "request.jwt.claim.sub" to '66666666-6666-6666-6666-666666666666';
+do $$
+declare
+  visible_count integer;
+begin
+  select count(*) into visible_count from public.campaigns;
+  if visible_count <> 0 then
+    raise exception 'TEST FAILED: anonymous user saw a campaign';
+  end if;
+  begin
+    perform * from public.join_campaign('CAMP01', 'Anonymous');
+    raise exception 'TEST FAILED: anonymous user joined a campaign';
+  exception when raise_exception then
+    if sqlerrm not like '%registered account%' then
+      raise;
+    end if;
+  end;
+end;
+$$;
 
 -- DM A owns Campaign A.
 set local "request.jwt.claim.sub" to '11111111-1111-1111-1111-111111111111';
@@ -103,6 +128,36 @@ select * from public.join_campaign('CAMP01', 'Player Alpha');
 
 set local "request.jwt.claim.sub" to '33333333-3333-3333-3333-333333333333';
 select * from public.join_campaign('CAMP01', 'Player Beta');
+
+-- Newly shared cards stay hidden until the DM explicitly chooses recipients.
+set local "request.jwt.claim.sub" to '22222222-2222-2222-2222-222222222222';
+do $$
+declare
+  visible_count integer;
+begin
+  select count(*) into visible_count from public.shared_cards
+  where campaign_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  if visible_count <> 0 then
+    raise exception 'TEST FAILED: card was visible before DM granted access';
+  end if;
+end;
+$$;
+
+set local "request.jwt.claim.sub" to '11111111-1111-1111-1111-111111111111';
+insert into public.shared_card_recipients (
+  campaign_id, shared_card_id, user_id
+)
+values
+  (
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    '22222222-2222-2222-2222-222222222222'
+  ),
+  (
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    '33333333-3333-3333-3333-333333333333'
+  );
 
 set local "request.jwt.claim.sub" to '22222222-2222-2222-2222-222222222222';
 do $$
@@ -195,6 +250,63 @@ begin
   end if;
 end;
 $$;
+
+-- The DM can hide a card from one player without affecting another player.
+set local "request.jwt.claim.sub" to '11111111-1111-1111-1111-111111111111';
+delete from public.shared_card_recipients
+where campaign_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+  and shared_card_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
+  and user_id = '22222222-2222-2222-2222-222222222222';
+
+set local "request.jwt.claim.sub" to '22222222-2222-2222-2222-222222222222';
+do $$
+declare
+  visible_count integer;
+begin
+  select count(*) into visible_count from public.shared_cards
+  where id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  if visible_count <> 0 then
+    raise exception 'TEST FAILED: DM-restricted player still saw the card';
+  end if;
+
+  begin
+    insert into public.shared_card_recipients (
+      campaign_id, shared_card_id, user_id
+    )
+    values (
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      'cccccccc-cccc-cccc-cccc-cccccccccccc',
+      '22222222-2222-2222-2222-222222222222'
+    );
+    raise exception 'TEST FAILED: player granted itself card access';
+  exception when insufficient_privilege then
+    null;
+  end;
+end;
+$$;
+
+set local "request.jwt.claim.sub" to '33333333-3333-3333-3333-333333333333';
+do $$
+declare
+  visible_count integer;
+begin
+  select count(*) into visible_count from public.shared_cards
+  where id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  if visible_count <> 1 then
+    raise exception 'TEST FAILED: restricting one player affected another';
+  end if;
+end;
+$$;
+
+set local "request.jwt.claim.sub" to '11111111-1111-1111-1111-111111111111';
+insert into public.shared_card_recipients (
+  campaign_id, shared_card_id, user_id
+)
+values (
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  'cccccccc-cccc-cccc-cccc-cccccccccccc',
+  '22222222-2222-2222-2222-222222222222'
+);
 
 -- A non-member sees no campaigns or cards.
 set local "request.jwt.claim.sub" to '44444444-4444-4444-4444-444444444444';

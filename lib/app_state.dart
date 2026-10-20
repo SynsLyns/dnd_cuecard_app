@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:crypto/crypto.dart';
 import 'package:dnd_cuecard_app/logic/cue_card_database.dart';
 import 'package:dnd_cuecard_app/logic/supabase_service.dart';
 import 'package:dnd_cuecard_app/models/campaign.dart';
@@ -185,12 +188,14 @@ class AppState extends ChangeNotifier {
         .firstOrNull
         ?.color
         .toARGB32();
+    final iconHash = _iconHash(card);
 
     final currentHash = card.canonicalHash(
       typeName: typeName,
       typeColor: typeColor,
       rarityName: rarityName,
       rarityColor: rarityColor,
+      iconHash: iconHash,
     );
 
     if (currentHash == share.pushedHash) {
@@ -200,10 +205,29 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> shareCard(CueCard card, [String? targetCampaignId]) async {
+  String? _iconHash(CueCard card) {
+    final path = card.iconFilePath;
+    if (path == null || path.isEmpty) return null;
+    final file = File(path);
+    if (!file.existsSync()) return null;
+    return sha256.convert(file.readAsBytesSync()).toString();
+  }
+
+  Future<void> shareCard(
+    CueCard card, {
+    String? targetCampaignId,
+    Set<String>? recipientIds,
+  }) async {
     final campaignId = targetCampaignId ?? activeCampaignId;
     if (campaignId == null) {
       throw CloudSharingException('No campaign selected.');
+    }
+    if (getCardShareStatus(card, campaignId: campaignId) ==
+            CardShareStatus.notShared &&
+        (recipientIds == null || recipientIds.isEmpty)) {
+      throw CloudSharingException(
+        'Choose which campaign players can see this card before sharing it.',
+      );
     }
     final typeName = cardTypes
         .where((t) => t.id == card.type)
@@ -227,6 +251,7 @@ class AppState extends ChangeNotifier {
     final share = await _supabaseService.shareOrPushCard(
       campaignId: campaignId,
       card: card,
+      recipientIds: recipientIds,
       typeName: typeName,
       typeColor: typeColor,
       rarityName: rarityName,
@@ -238,7 +263,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> pushCardUpdate(CueCard card, [String? targetCampaignId]) async {
-    await shareCard(card, targetCampaignId);
+    await shareCard(card, targetCampaignId: targetCampaignId);
   }
 
   Future<List<CueCard>> getCardsByIds(Set<int> ids) async {
@@ -250,9 +275,10 @@ class AppState extends ChangeNotifier {
   }
 
   Future<CardShareBatchResult> shareCards(
-    Iterable<CueCard> cards, [
+    Iterable<CueCard> cards, {
     String? targetCampaignId,
-  ]) async {
+    Set<String>? recipientIds,
+  }) async {
     final campaignId = targetCampaignId ?? activeCampaignId;
     if (campaignId == null) {
       throw CloudSharingException('No campaign selected.');
@@ -262,7 +288,14 @@ class AppState extends ChangeNotifier {
     final failures = <CardShareFailure>[];
     for (final card in cards) {
       try {
-        await shareCard(card, campaignId);
+        final needsFirstShareSelection =
+            getCardShareStatus(card, campaignId: campaignId) ==
+            CardShareStatus.notShared;
+        await shareCard(
+          card,
+          targetCampaignId: campaignId,
+          recipientIds: needsFirstShareSelection ? recipientIds : null,
+        );
         succeededCount++;
       } catch (error) {
         failures.add(
@@ -303,7 +336,7 @@ class AppState extends ChangeNotifier {
           getCardShareStatus(card, campaignId: campaignId) ==
           CardShareStatus.changesNotPushed,
     );
-    return shareCards(outdatedCards, campaignId);
+    return shareCards(outdatedCards, targetCampaignId: campaignId);
   }
 
   void selectCard(CueCard? card) {

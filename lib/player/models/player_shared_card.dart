@@ -1,14 +1,18 @@
+import 'dart:typed_data';
+
 class PlayerSharedCard {
   final String id;
   final int version;
   final int schemaVersion;
   final Map<String, dynamic> payload;
+  final Uint8List? iconBytes;
 
   const PlayerSharedCard({
     required this.id,
     required this.version,
     required this.schemaVersion,
     required this.payload,
+    this.iconBytes,
   });
 
   factory PlayerSharedCard.fromMap(Map<String, dynamic> map) {
@@ -20,6 +24,9 @@ class PlayerSharedCard {
       payload: rawPayload is Map
           ? rawPayload.map((key, value) => MapEntry(key.toString(), value))
           : const {},
+      iconBytes: map['icon_bytes'] is Uint8List
+          ? map['icon_bytes'] as Uint8List
+          : null,
     );
   }
 
