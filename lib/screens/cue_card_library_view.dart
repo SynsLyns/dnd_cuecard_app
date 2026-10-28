@@ -378,6 +378,8 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
                 child: Image.file(
                   File(cueCard.iconFilePath!),
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const Icon(Icons.image_not_supported_outlined),
                 ),
               ),
             const SizedBox(width: 8),

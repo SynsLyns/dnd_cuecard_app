@@ -12,6 +12,7 @@ import '../models/cue_card.dart';
 import '../models/rarity.dart';
 import '../models/relationship.dart';
 import '../models/tag.dart';
+import 'card_icon_storage.dart';
 import 'package:uuid/uuid.dart';
 
 class CueCardDatabase {
@@ -20,6 +21,20 @@ class CueCardDatabase {
 
   factory CueCardDatabase() {
     return _instance;
+  }
+
+  CueCard _cueCardFromMap(
+    Map<String, Object?> map,
+    List<Tag> tags,
+    String supportDirectory,
+  ) {
+    final cueCard = CueCard.fromMap(map, tags);
+    return cueCard.copyWith(
+      iconFilePath: CardIconStorage.resolvePath(
+        cueCard.iconFilePath,
+        supportDirectory,
+      ),
+    );
   }
 
   CueCardDatabase._internal();
@@ -41,7 +56,7 @@ class CueCardDatabase {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onConfigure: _onConfigure,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
@@ -68,6 +83,25 @@ class CueCardDatabase {
           CHECK (parent1_id < parent2_id)
         );
       ''');
+    }
+    if (oldVersion < 4) {
+      final rows = await db.query(
+        'cue_cards',
+        columns: ['id', 'icon'],
+        where: 'icon IS NOT NULL',
+      );
+      for (final row in rows) {
+        final iconPath = row['icon'] as String?;
+        final storedPath = CardIconStorage.toStoredPath(iconPath);
+        if (storedPath != null && storedPath != iconPath) {
+          await db.update(
+            'cue_cards',
+            {'icon': storedPath},
+            where: 'id = ?',
+            whereArgs: [row['id']],
+          );
+        }
+      }
     }
     if (oldVersion < 3) {
       // 1. Add uuid column to cue_cards
@@ -174,7 +208,9 @@ class CueCardDatabase {
 
   Future<int> insertCueCard(CueCard cueCard) async {
     final db = await database;
-    int id = await db.insert('cue_cards', cueCard.toMapForInsert());
+    final map = cueCard.toMapForInsert();
+    map['icon'] = CardIconStorage.toStoredPath(cueCard.iconFilePath);
+    int id = await db.insert('cue_cards', map);
     for (String tagName in cueCard.tags.map((tag) => tag.name)) {
       final tagId = await _getOrCreateTagId(db, tagName);
       await db.insert('cue_card_tags', {'cue_card_id': id, 'tag_id': tagId}, conflictAlgorithm: ConflictAlgorithm.ignore);
@@ -187,7 +223,8 @@ class CueCardDatabase {
     final List<Map<String, Object?>> cueCard = await db.query('cue_cards', where: 'id = ?', whereArgs: [id]);
     if (cueCard.isEmpty) return null;
     final List<Tag> tags = await getTagsForCueCard(id);
-    return CueCard.fromMap(cueCard[0], tags);
+    final supportDirectory = (await getApplicationSupportDirectory()).path;
+    return _cueCardFromMap(cueCard[0], tags, supportDirectory);
   }
 
   Future<CueCard?> getCueCardByUuid(String uuid) async {
@@ -196,17 +233,19 @@ class CueCardDatabase {
     if (cueCard.isEmpty) return null;
     final int id = cueCard[0]['id'] as int;
     final List<Tag> tags = await getTagsForCueCard(id);
-    return CueCard.fromMap(cueCard[0], tags);
+    final supportDirectory = (await getApplicationSupportDirectory()).path;
+    return _cueCardFromMap(cueCard[0], tags, supportDirectory);
   }
 
   Future<List<CueCard>> getAllCueCards() async {
     final db = await database;
     final List<Map<String, Object?>> cueCards = await db.query('cue_cards');
+    final supportDirectory = (await getApplicationSupportDirectory()).path;
     List<CueCard> cueCardList = [];
     for (final cueCardMap in cueCards) {
       final int id = cueCardMap['id'] as int;
       final List<Tag> tags = await getTagsForCueCard(id);
-      cueCardList.add(CueCard.fromMap(cueCardMap, tags));
+      cueCardList.add(_cueCardFromMap(cueCardMap, tags, supportDirectory));
     }
     return cueCardList;
   }
@@ -255,11 +294,12 @@ class CueCardDatabase {
 
     final result = await db.rawQuery(query, [...whereArgs, limit, offset]);
 
+    final supportDirectory = (await getApplicationSupportDirectory()).path;
     List<CueCard> cueCardList = [];
     for (final cueCardMap in result) {
       final int id = cueCardMap['id'] as int;
       final List<Tag> tags = await getTagsForCueCard(id);
-      cueCardList.add(CueCard.fromMap(cueCardMap, tags));
+      cueCardList.add(_cueCardFromMap(cueCardMap, tags, supportDirectory));
     }
     return cueCardList;
   }
@@ -323,6 +363,7 @@ class CueCardDatabase {
   Future<int> updateCueCard(CueCard cueCard) async {
     final db = await database;
     Map<String, Object?> updateMap = cueCard.toMapForInsert();
+    updateMap['icon'] = CardIconStorage.toStoredPath(cueCard.iconFilePath);
     if (cueCard.uuid == null) {
       final existing = await db.query('cue_cards', columns: ['uuid'], where: 'id = ?', whereArgs: [cueCard.id]);
       if (existing.isNotEmpty && existing.first['uuid'] != null) {

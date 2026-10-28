@@ -131,7 +131,8 @@ the Google OAuth client's authorized redirect URI as
 `https://<project-ref>.supabase.co/auth/v1/callback`. For the packaged Windows
 DM app, build/install the MSIX package so the `dndcuecard://login-callback`
 protocol is registered; allow that URI in Supabase's redirect URL list.
-Google OAuth is opened in the system browser.
+Google OAuth is opened in the system browser, and the callback is forwarded to
+the running desktop app if one is already open.
 
 ## Tests and RLS verification
 

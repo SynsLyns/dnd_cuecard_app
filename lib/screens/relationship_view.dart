@@ -121,7 +121,20 @@ class RelationshipView extends StatelessWidget {
                             child: Row(
                               children: [
                                 if (card.iconFilePath != null)
-                                  SizedBox(width: 48, height: 48, child: Image.file(File(card.iconFilePath!), fit: BoxFit.cover)),
+                                  SizedBox(
+                                    width: 48,
+                                    height: 48,
+                                    child: Image.file(
+                                      File(card.iconFilePath!),
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              const Icon(
+                                                Icons
+                                                    .image_not_supported_outlined,
+                                              ),
+                                    ),
+                                  ),
                                 const SizedBox(width: 8),
                                 Expanded(child: Text(card.title ?? 'Untitled')),
                               ],

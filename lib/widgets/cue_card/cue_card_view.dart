@@ -67,23 +67,34 @@ class _CueCardViewState extends State<CueCardView> {
         decoration: BoxDecoration(
           border: Border.all(color: Colors.black),
           color: const Color.fromARGB(255, 255, 255, 255),
-          image: widget.image != null
-              ? DecorationImage(
-                  image:
-                      FileImage(File(widget.image!.path))
-                          as ImageProvider<Object>,
-                )
-              : null,
         ),
-        child: widget.readOnly ? null : IconButton(
-          onPressed: _showIconSelectionDialog,
-          icon: Icon(
-            Icons.add_a_photo,
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
-          ),
-          style: IconButton.styleFrom(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-          ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (widget.image != null)
+              Image.file(
+                File(widget.image!.path),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => const Center(
+                  child: Icon(Icons.image_not_supported_outlined),
+                ),
+              ),
+            if (!widget.readOnly)
+              IconButton(
+                onPressed: _showIconSelectionDialog,
+                icon: Icon(
+                  Icons.add_a_photo,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.5),
+                ),
+                style: IconButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.zero,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -103,10 +114,15 @@ class _CueCardViewState extends State<CueCardView> {
         child: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
             return Container(
-                decoration: BoxDecoration(
+              decoration: BoxDecoration(
                 color: cardTypeColor,
                 border: Border.all(color: Colors.black, width: 1),
-                borderRadius: BorderRadius.all(Radius.elliptical(constraints.maxWidth / 2, constraints.maxHeight / 2))
+                borderRadius: BorderRadius.all(
+                  Radius.elliptical(
+                    constraints.maxWidth / 2,
+                    constraints.maxHeight / 2,
+                  ),
+                ),
               ),
               child: TextField(
                 controller: widget.controllers.titleController,
@@ -194,7 +210,12 @@ class _CueCardViewState extends State<CueCardView> {
               _selectExistingImage(iconPath);
               Navigator.pop(context);
             },
-            child: Image.file(File(iconPath), fit: BoxFit.cover),
+            child: Image.file(
+              File(iconPath),
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.image_not_supported_outlined),
+            ),
           );
         },
       ),

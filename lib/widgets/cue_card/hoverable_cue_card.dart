@@ -181,6 +181,8 @@ class _HoverableCueCardState extends State<HoverableCueCard> {
               child: Image.file(
                 File(widget.cueCard.iconFilePath!),
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.image_not_supported_outlined),
               ),
             ),
           )
