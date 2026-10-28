@@ -75,7 +75,7 @@ SQLite or `dart:io` code from the desktop app.
 ```powershell
 flutter run -d chrome -t lib/player/main.dart `
   --dart-define=SUPABASE_URL=https://<project-ref>.supabase.co `
-  --dart-define=SUPABASE_ANON_KEY=<anon-or-publishable-key>
+  --dart-define=SUPABASE_KEY=<anon-or-publishable-key>
 ```
 
 Player auth sessions and the last-viewed card versions are stored in the
@@ -85,7 +85,7 @@ release bundle with:
 ```powershell
 flutter build web --release -t lib/player/main.dart `
   --dart-define=SUPABASE_URL=https://<project-ref>.supabase.co `
-  --dart-define=SUPABASE_ANON_KEY=<anon-or-publishable-key>
+  --dart-define=SUPABASE_KEY=<anon-or-publishable-key>
 ```
 
 The generated static site is in `build/web`. Deploy its contents to any static
@@ -94,6 +94,34 @@ set the matching base path, for example `--base-href /cards/`, when building.
 The player link uses a hash route, so normal refreshes remain at the site root.
 Pass the same player URL to the DM app as `PLAYER_WEB_URL`, or set it in the DM
 app's sharing settings.
+
+## Deploy the player app to Cloudflare Workers
+
+The root `wrangler.jsonc` configures the Worker named `dnd-cuecard-app` to
+serve the Flutter build in `build/web`. Build the web app with the Supabase
+project URL and publishable key, then deploy from the repository root with
+Wrangler:
+
+```powershell
+flutter build web --release -t lib/player/main.dart `
+  --dart-define=SUPABASE_URL=https://<project-ref>.supabase.co `
+  --dart-define=SUPABASE_KEY=<anon-or-publishable-key>
+npx wrangler deploy
+```
+
+The GitHub Actions workflow at `.github/workflows/deploy.yml` builds the player
+entry point and deploys it whenever code is pushed to `main`; you can also run
+it manually with **Actions → Deploy to Cloudflare Workers → Run workflow**.
+Configure these values in the repository's **Settings → Secrets and variables
+→ Actions**:
+
+- Repository variables: `SUPABASE_URL` and `SUPABASE_KEY` (the public
+  publishable/anon key).
+- Repository secrets: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+
+The Cloudflare API token needs permission to deploy Workers for the target
+account. The publishable key is public client configuration; never put a
+Supabase service-role key in a GitHub variable, secret, or web build.
 
 ### Google OAuth redirect setup
 
