@@ -11,7 +11,6 @@ import 'package:provider/provider.dart';
 import 'package:dnd_cuecard_app/widgets/cue_card/hoverable_cue_card.dart';
 import 'package:dnd_cuecard_app/theme/app_colors.dart';
 import 'campaign_management_dialog.dart';
-import 'campaign_player_selection_dialog.dart';
 
 class CueCardLibraryView extends StatefulWidget {
   const CueCardLibraryView({super.key});
@@ -22,10 +21,8 @@ class CueCardLibraryView extends StatefulWidget {
 
 class _CueCardLibraryViewState extends State<CueCardLibraryView> {
   final List<Tag> _selectedTags = [];
-  final Set<int> _selectedCardIds = {};
   int _cueCardsPerPage = 1;
-  bool _isSelectingCards = false;
-  bool _isSharingSelection = false;
+  bool _isPushingUpdates = false;
 
   Timer? _debounce;
 
@@ -73,29 +70,13 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
               ),
               if (activeCampaign != null) ...[
                 IconButton(
-                  icon: const Icon(Icons.checklist, size: 18),
-                  tooltip: _isSelectingCards
-                      ? 'Cancel card selection'
-                      : 'Select cards to share',
-                  constraints: const BoxConstraints(
-                    minWidth: 44,
-                    minHeight: 44,
-                  ),
-                  onPressed: _isSharingSelection
-                      ? null
-                      : () => setState(() {
-                          _isSelectingCards = !_isSelectingCards;
-                          _selectedCardIds.clear();
-                        }),
-                ),
-                IconButton(
                   icon: const Icon(Icons.sync, size: 18),
                   tooltip: 'Push all outdated cards to campaign',
                   constraints: const BoxConstraints(
                     minWidth: 44,
                     minHeight: 44,
                   ),
-                  onPressed: _isSharingSelection
+                  onPressed: _isPushingUpdates
                       ? null
                       : () => _pushAllOutdated(appState),
                 ),
@@ -117,40 +98,13 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
               ),
             ],
           ),
-          if (activeCampaign != null && _isSelectingCards)
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${_selectedCardIds.length} card(s) selected',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.muted,
-                    ),
-                  ),
-                ),
-                TextButton.icon(
-                  icon: _isSharingSelection
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.share, size: 16),
-                  label: const Text('Share selected'),
-                  onPressed: _selectedCardIds.isEmpty || _isSharingSelection
-                      ? null
-                      : () => _shareSelectedCards(appState),
-                ),
-              ],
-            ),
         ],
       ),
     );
   }
 
   Future<void> _pushAllOutdated(AppState appState) async {
-    setState(() => _isSharingSelection = true);
+    setState(() => _isPushingUpdates = true);
     try {
       final result = await appState.pushAllOutdatedCards();
       if (mounted) {
@@ -168,60 +122,7 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isSharingSelection = false);
-    }
-  }
-
-  Future<void> _shareSelectedCards(AppState appState) async {
-    setState(() => _isSharingSelection = true);
-    try {
-      final cards = await appState.getCardsByIds(_selectedCardIds);
-      if (!mounted) return;
-      final cardsNeedingRecipients = cards
-          .where(
-            (card) =>
-                appState.getCardShareStatus(card) == CardShareStatus.notShared,
-          )
-          .toList();
-      Set<String>? recipientIds;
-      if (cardsNeedingRecipients.isNotEmpty) {
-        final campaign = appState.activeCampaign;
-        if (campaign == null) {
-          throw CloudSharingException('No campaign selected.');
-        }
-        recipientIds = await showCampaignPlayerSelectionDialog(
-          context,
-          campaign: campaign,
-          cardTitle: cardsNeedingRecipients.length == 1
-              ? cardsNeedingRecipients.single.title ?? 'Untitled'
-              : '${cardsNeedingRecipients.length} selected cards',
-        );
-        if (recipientIds == null) return;
-      }
-      final result = await appState.shareCards(
-        cards,
-        recipientIds: recipientIds,
-      );
-      if (mounted) {
-        await _showBatchResult('Share selected cards', result);
-        setState(() {
-          _selectedCardIds.clear();
-          _isSelectingCards = false;
-        });
-      }
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Could not share selected cards: '
-              '${CloudSharingException.userMessage(error)}',
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isSharingSelection = false);
+      if (mounted) setState(() => _isPushingUpdates = false);
     }
   }
 
@@ -350,22 +251,7 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
   }
 
   Widget _buildCardItem(CueCard cueCard, AppState appState) {
-    final selectionMode =
-        _isSelectingCards && appState.activeCampaignId != null;
-    final cardWidget = HoverableCueCard(
-      cueCard: cueCard,
-      selectionMode: selectionMode,
-      isSelected: cueCard.id != null && _selectedCardIds.contains(cueCard.id),
-      onSelectionChanged: cueCard.id == null
-          ? null
-          : (selected) => setState(() {
-              if (selected) {
-                _selectedCardIds.add(cueCard.id!);
-              } else {
-                _selectedCardIds.remove(cueCard.id);
-              }
-            }),
-    );
+    final cardWidget = HoverableCueCard(cueCard: cueCard);
 
     if (appState.isRelationshipMode) {
       return Draggable<CueCard>(

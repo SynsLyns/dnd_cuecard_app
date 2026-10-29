@@ -8,18 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class HoverableCueCard extends StatefulWidget {
-  const HoverableCueCard({
-    super.key,
-    required this.cueCard,
-    this.selectionMode = false,
-    this.isSelected = false,
-    this.onSelectionChanged,
-  });
+  const HoverableCueCard({super.key, required this.cueCard});
 
   final CueCard cueCard;
-  final bool selectionMode;
-  final bool isSelected;
-  final ValueChanged<bool>? onSelectionChanged;
 
   @override
   State<HoverableCueCard> createState() => _HoverableCueCardState();
@@ -175,7 +166,6 @@ class _HoverableCueCardState extends State<HoverableCueCard> {
     final hasActiveCampaign = appState.activeCampaignId != null;
     final shareStatus = appState.getCardShareStatus(widget.cueCard);
     final isCurrentCard =
-        !widget.selectionMode &&
         widget.cueCard.id != null &&
         appState.selectedCard?.id == widget.cueCard.id;
     final showActions = _isHovered || _isFocused;
@@ -205,31 +195,14 @@ class _HoverableCueCardState extends State<HoverableCueCard> {
         borderRadius: borderRadius,
         child: InkWell(
           borderRadius: borderRadius,
-          onTap: () {
-            if (widget.selectionMode) {
-              widget.onSelectionChanged?.call(!widget.isSelected);
-            } else {
-              appState.selectCard(widget.cueCard);
-            }
-          },
+          onTap: () => appState.selectCard(widget.cueCard),
           onHover: (hovering) => setState(() => _isHovered = hovering),
           onFocusChange: (focused) => setState(() => _isFocused = focused),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: [
-                if (widget.selectionMode)
-                  SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: Checkbox(
-                      value: widget.isSelected,
-                      onChanged: (value) =>
-                          widget.onSelectionChanged?.call(value ?? false),
-                    ),
-                  )
-                else
-                  _buildCardIcon(),
+                _buildCardIcon(),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -323,8 +296,7 @@ class _HoverableCueCardState extends State<HoverableCueCard> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (!widget.selectionMode &&
-            hasActiveCampaign &&
+        if (hasActiveCampaign &&
             shareStatus == CardShareStatus.changesNotPushed)
           IconButton(
             icon: const Icon(
@@ -335,8 +307,7 @@ class _HoverableCueCardState extends State<HoverableCueCard> {
             tooltip: 'Push update to players',
             onPressed: () => _pushUpdate(appState),
           ),
-        if (!widget.selectionMode &&
-            hasActiveCampaign &&
+        if (hasActiveCampaign &&
             shareStatus == CardShareStatus.notShared &&
             showActions)
           IconButton(
@@ -344,8 +315,7 @@ class _HoverableCueCardState extends State<HoverableCueCard> {
             tooltip: 'Share to campaign',
             onPressed: () => _shareCard(appState),
           ),
-        if (!widget.selectionMode &&
-            hasActiveCampaign &&
+        if (hasActiveCampaign &&
             shareStatus != CardShareStatus.notShared &&
             showActions)
           IconButton(
@@ -357,7 +327,7 @@ class _HoverableCueCardState extends State<HoverableCueCard> {
             tooltip: 'Unshare from campaign',
             onPressed: () => _unshareCard(appState),
           ),
-        if (!widget.selectionMode && showActions)
+        if (showActions)
           IconButton(
             icon: const Icon(Icons.delete, color: AppColors.muted, size: 20),
             tooltip: 'Delete card',
