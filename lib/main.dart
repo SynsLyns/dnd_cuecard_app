@@ -12,6 +12,7 @@ import 'screens/cue_card_library_view.dart';
 import 'screens/initiative_tracker_view.dart';
 import 'config/supabase_config.dart';
 import 'logic/supabase_service.dart';
+import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 
 void main(List<String> args) async {
@@ -121,14 +122,28 @@ class _MyHomePageState extends State<MyHomePage> {
           body: Row(
             children: [
               Container(
-                color: Theme.of(context).colorScheme.surface,
+                color: AppColors.sidebar,
                 child: Row(
                   children: [
-                    if (_isLibraryVisible)
-                      SizedBox(
-                        width: sidebarWidth,
-                        child: const CueCardLibraryView(),
+                    ClipRect(
+                      child: AnimatedContainer(
+                        width: _isLibraryVisible ? sidebarWidth : 0,
+                        duration: const Duration(milliseconds: 280),
+                        curve: Curves.easeInOutCubic,
+                        child: SizedBox(
+                          width: sidebarWidth,
+                          child: IgnorePointer(
+                            ignoring: !_isLibraryVisible,
+                            child: AnimatedOpacity(
+                              opacity: _isLibraryVisible ? 1 : 0,
+                              duration: const Duration(milliseconds: 180),
+                              curve: Curves.easeInOut,
+                              child: const CueCardLibraryView(),
+                            ),
+                          ),
+                        ),
                       ),
+                    ),
                     SizedBox(
                       width: 44,
                       child: Center(
@@ -136,6 +151,14 @@ class _MyHomePageState extends State<MyHomePage> {
                           tooltip: _isLibraryVisible
                               ? 'Collapse card library'
                               : 'Expand card library',
+                          style: IconButton.styleFrom(
+                            foregroundColor: AppColors.matcha,
+                            backgroundColor: AppColors.sidebar,
+                            minimumSize: const Size(44, 44),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                           icon: Icon(
                             _isLibraryVisible
                                 ? Icons.chevron_left

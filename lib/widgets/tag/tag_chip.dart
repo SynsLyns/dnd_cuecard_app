@@ -44,31 +44,47 @@ class _TagChipState extends State<TagChip> {
                   ),
                 ),
               ),
-              if (widget.onRemove != null && showRemove) ...[
+              if (widget.onRemove != null) ...[
                 const SizedBox(width: 4),
-                SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: IgnorePointer(
-                    ignoring: !showRemove,
-                    child: AnimatedOpacity(
-                      opacity: showRemove ? 1 : 0,
-                      duration: const Duration(milliseconds: 100),
-                      child: IconButton(
-                        tooltip: 'Remove tag',
-                        onPressed: widget.onRemove,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 32,
-                          minHeight: 32,
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 100),
+                  curve: Curves.easeInOut,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0, end: showRemove ? 1 : 0),
+                    duration: const Duration(milliseconds: 100),
+                    curve: Curves.easeInOut,
+                    builder: (context, progress, child) {
+                      return ClipRect(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: progress,
+                          child: Opacity(
+                            opacity: progress,
+                            child: SizedBox(
+                              width: 32,
+                              height: 32,
+                              child: IgnorePointer(
+                                ignoring: progress < 1,
+                                child: IconButton(
+                                  tooltip: 'Remove tag',
+                                  onPressed: widget.onRemove,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 32,
+                                    minHeight: 32,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: AppColors.matcha,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                        icon: const Icon(
-                          Icons.close,
-                          size: 16,
-                          color: AppColors.matcha,
-                        ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ),
               ],

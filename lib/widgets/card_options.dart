@@ -65,11 +65,18 @@ class CardOptions extends StatelessWidget {
           );
         }
         return Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(width: 190, child: _field('CARD TYPE', cardType)),
-            const SizedBox(width: 16),
-            SizedBox(width: 190, child: _field('RARITY', rarity)),
+            SizedBox(
+              width: 190,
+              child: Column(
+                children: [
+                  _field('CARD TYPE', cardType),
+                  const SizedBox(height: 12),
+                  _field('RARITY', rarity),
+                ],
+              ),
+            ),
             const SizedBox(width: 16),
             Expanded(child: _field('TAGS', tags, height: null)),
           ],
