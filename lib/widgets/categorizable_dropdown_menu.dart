@@ -63,21 +63,30 @@ class _CategorizableDropdownMenuState<T extends Nameable>
   }
 
   void _handleFocusChange() {
-    if (!_focusNode.hasFocus) {
-      final name = _selectedName ?? '';
-      if (widget.controller.text != name) {
-        widget.controller.text = name;
-      }
-      _isFirstFocus = true;
-    } else {
+    if (_focusNode.hasFocus) {
+      _selectedName ??= widget.controller.text;
       widget.controller.selection = TextSelection(
         baseOffset: 0,
         extentOffset: widget.controller.text.length,
       );
+    } else {
+      final name = _selectedName;
+      if (name != null && widget.controller.text != name) {
+        widget.controller.text = name;
+      }
+      _isFirstFocus = true;
     }
   }
 
   void _handleControllerChange() {
+    if (!_focusNode.hasFocus && widget.controller.text.isNotEmpty) {
+      final currentValue = widget.values
+          .where((value) => value.name == widget.controller.text)
+          .firstOrNull;
+      if (currentValue != null) {
+        _selectedName = currentValue.name;
+      }
+    }
     setState(() {
       if (widget.controller.text.isEmpty) {
         _selectedName = null;
