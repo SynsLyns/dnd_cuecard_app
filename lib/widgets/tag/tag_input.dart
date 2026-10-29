@@ -67,46 +67,47 @@ class _TagInputFieldState extends State<TagInputField> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: AppColors.paper,
-        border: Border.all(
-          color: _focusNode.hasFocus ? AppColors.matcha : AppColors.border,
-          width: _focusNode.hasFocus ? 1.5 : 1,
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: widget.selectedTags
-                    .map(
-                      (tag) => Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: TagChip(
-                          tag: tag.name,
-                          onRemove: widget.readOnly
-                              ? null
-                              : () => _removeTag(tag),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
+    if (widget.readOnly && widget.selectedTags.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (widget.selectedTags.isNotEmpty) ...[
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: widget.selectedTags
+                .map(
+                  (tag) => TagChip(
+                    tag: tag.name,
+                    onRemove: widget.readOnly ? null : () => _removeTag(tag),
+                  ),
+                )
+                .toList(),
           ),
-          if (!widget.readOnly) ...[
-            const SizedBox(width: 4),
-            Expanded(flex: 2, child: _buildAutocomplete()),
-          ],
+          if (!widget.readOnly) const SizedBox(height: 8),
         ],
-      ),
+        if (!widget.readOnly)
+          Container(
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: AppColors.paper,
+              border: Border.all(
+                color: _focusNode.hasFocus
+                    ? AppColors.matcha
+                    : AppColors.border,
+                width: _focusNode.hasFocus ? 1.5 : 1,
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.centerLeft,
+            child: _buildAutocomplete(),
+          ),
+      ],
     );
   }
 

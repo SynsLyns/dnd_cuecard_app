@@ -32,15 +32,19 @@ class _TagChipState extends State<TagChip> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                widget.tag,
-                style: const TextStyle(
-                  color: AppColors.matcha,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+              Flexible(
+                child: Text(
+                  widget.tag,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.matcha,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-              if (widget.onRemove != null) ...[
+              if (widget.onRemove != null && showRemove) ...[
                 const SizedBox(width: 4),
                 SizedBox(
                   width: 32,

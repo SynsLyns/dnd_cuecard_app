@@ -60,7 +60,7 @@ class CardOptions extends StatelessWidget {
               const SizedBox(height: 12),
               _field('RARITY', rarity),
               const SizedBox(height: 12),
-              _field('TAGS', tags),
+              _field('TAGS', tags, height: null),
             ],
           );
         }
@@ -71,14 +71,14 @@ class CardOptions extends StatelessWidget {
             const SizedBox(width: 16),
             SizedBox(width: 190, child: _field('RARITY', rarity)),
             const SizedBox(width: 16),
-            Expanded(child: _field('TAGS', tags)),
+            Expanded(child: _field('TAGS', tags, height: null)),
           ],
         );
       },
     );
   }
 
-  Widget _field(String label, Widget child) {
+  Widget _field(String label, Widget child, {double? height = 44}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -94,7 +94,7 @@ class CardOptions extends StatelessWidget {
             ),
           ),
         ),
-        SizedBox(height: 44, child: child),
+        if (height == null) child else SizedBox(height: height, child: child),
       ],
     );
   }
