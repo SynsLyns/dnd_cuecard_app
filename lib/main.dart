@@ -128,17 +128,24 @@ class _MyHomePageState extends State<MyHomePage> {
                     ClipRect(
                       child: AnimatedContainer(
                         width: _isLibraryVisible ? sidebarWidth : 0,
-                        duration: const Duration(milliseconds: 280),
+                        duration: const Duration(milliseconds: 240),
                         curve: Curves.easeInOutCubic,
-                        child: SizedBox(
-                          width: sidebarWidth,
+                        child: OverflowBox(
+                          alignment: Alignment.centerLeft,
+                          minWidth: sidebarWidth,
+                          maxWidth: sidebarWidth,
                           child: IgnorePointer(
                             ignoring: !_isLibraryVisible,
-                            child: AnimatedOpacity(
-                              opacity: _isLibraryVisible ? 1 : 0,
-                              duration: const Duration(milliseconds: 180),
-                              curve: Curves.easeInOut,
-                              child: const CueCardLibraryView(),
+                            child: AnimatedSlide(
+                              offset: _isLibraryVisible
+                                  ? Offset.zero
+                                  : const Offset(-1, 0),
+                              duration: const Duration(milliseconds: 240),
+                              curve: Curves.easeInOutCubic,
+                              child: SizedBox(
+                                width: sidebarWidth,
+                                child: const CueCardLibraryView(),
+                              ),
                             ),
                           ),
                         ),
