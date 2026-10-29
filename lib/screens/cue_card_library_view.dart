@@ -285,10 +285,7 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
     final List<CueCard> filteredCueCards = appState.cueCards;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.sidebar,
-        border: Border(right: BorderSide(color: AppColors.hairline)),
-      ),
+      color: AppColors.sidebar,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Column(
