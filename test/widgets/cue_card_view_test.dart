@@ -7,12 +7,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  for (final size in [const Size(1100, 700), const Size(390, 844)]) {
+  for (final size in [
+    const Size(1100, 700),
+    const Size(1920, 1080),
+    const Size(390, 844),
+  ]) {
     testWidgets('cue card stays within layout at $size', (tester) async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = size;
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
+      final cardWidth = (size.width - 32).clamp(0, 1280).toDouble();
+      final cardHeight = (cardWidth / 1.78)
+          .clamp(360, double.infinity)
+          .toDouble();
 
       final controllers = CueCardFormControllers()
         ..titleController.text = 'Intermediate Water Magic of the Deep Currents'
@@ -32,20 +40,24 @@ void main() {
               padding: const EdgeInsets.all(16),
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 780),
-                  child: CueCardView(
-                    controllers: controllers,
-                    currentSelectedCardType: const CardType(
-                      name: 'Water',
-                      color: Color(0xFF25452E),
+                  constraints: const BoxConstraints(maxWidth: 1280),
+                  child: SizedBox(
+                    width: cardWidth,
+                    height: cardHeight,
+                    child: CueCardView(
+                      controllers: controllers,
+                      currentSelectedCardType: const CardType(
+                        name: 'Water',
+                        color: Color(0xFF25452E),
+                      ),
+                      currentSelectedRarity: const Rarity(
+                        name: 'Common',
+                        color: Color(0xFFC87532),
+                      ),
+                      image: null,
+                      onImageSelected: (_) {},
+                      readOnly: true,
                     ),
-                    currentSelectedRarity: const Rarity(
-                      name: 'Common',
-                      color: Color(0xFFC87532),
-                    ),
-                    image: null,
-                    onImageSelected: (_) {},
-                    readOnly: true,
                   ),
                 ),
               ),
@@ -57,6 +69,10 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text(controllers.titleController.text), findsOneWidget);
+      expect(tester.getSize(find.byType(CueCardView)).height, cardHeight);
+      if (cardWidth >= 640) {
+        expect(cardWidth / cardHeight, closeTo(1.78, 0.01));
+      }
     });
   }
 }

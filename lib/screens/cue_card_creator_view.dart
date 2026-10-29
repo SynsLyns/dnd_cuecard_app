@@ -16,7 +16,6 @@ import '../models/card_type.dart';
 import '../models/rarity.dart';
 import '../widgets/card_options.dart';
 import '../widgets/cue_card/cue_card_view.dart';
-import 'campaign_management_dialog.dart';
 import 'campaign_player_access_dialog.dart';
 import 'campaign_player_selection_dialog.dart';
 
@@ -127,16 +126,6 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final actions = [
-            OutlinedButton.icon(
-              icon: const Icon(Icons.campaign, size: 18),
-              label: const Text('Campaigns'),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => const CampaignManagementDialog(),
-                );
-              },
-            ),
             OutlinedButton(
               onPressed: _openInitiativeTrackerInNewWindow,
               child: const Text('Initiative Tracker'),
@@ -245,10 +234,21 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
             ),
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 780),
+                constraints: const BoxConstraints(maxWidth: 1280),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildCueCardView(readOnly: !_isEditMode),
+                    LayoutBuilder(
+                      builder: (context, cardConstraints) {
+                        final cardHeight = (cardConstraints.maxWidth / 1.78)
+                            .clamp(360.0, double.infinity)
+                            .toDouble();
+                        return SizedBox(
+                          height: cardHeight,
+                          child: _buildCueCardView(readOnly: !_isEditMode),
+                        );
+                      },
+                    ),
                     const SizedBox(height: 36),
                     _buildControlsPanel(),
                   ],

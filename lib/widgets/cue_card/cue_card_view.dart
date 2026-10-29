@@ -54,7 +54,7 @@ class _CueCardViewState extends State<CueCardView> {
         ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         children: [
           CardBanner(
             typeColor: typeColor,
@@ -65,9 +65,11 @@ class _CueCardViewState extends State<CueCardView> {
             readOnly: widget.readOnly,
             onAddImage: _showIconSelectionDialog,
           ),
-          CardBody(
-            controller: widget.controllers.descriptionController,
-            readOnly: widget.readOnly,
+          Expanded(
+            child: CardBody(
+              controller: widget.controllers.descriptionController,
+              readOnly: widget.readOnly,
+            ),
           ),
           CardFooter(
             notesController: widget.controllers.notesController,
@@ -452,7 +454,7 @@ class CardFooter extends StatelessWidget {
               controller: notesController,
               readOnly: readOnly,
               minLines: 1,
-              maxLines: null,
+              maxLines: 3,
               style: const TextStyle(
                 fontSize: 15,
                 height: 1.55,
