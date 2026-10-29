@@ -9,6 +9,7 @@ import 'package:dnd_cuecard_app/widgets/tag/tag_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dnd_cuecard_app/widgets/cue_card/hoverable_cue_card.dart';
+import 'package:dnd_cuecard_app/theme/app_colors.dart';
 import 'campaign_management_dialog.dart';
 import 'campaign_player_selection_dialog.dart';
 
@@ -35,27 +36,26 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
     });
   }
 
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
   Widget _buildCampaignBar(AppState appState) {
     final activeCampaign = appState.activeCampaign;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHigh,
-        border: Border(
-          bottom: BorderSide(color: Theme.of(context).dividerColor),
-        ),
-      ),
+      padding: EdgeInsets.zero,
+      decoration: BoxDecoration(color: AppColors.sidebar),
       child: Column(
         children: [
           Row(
             children: [
               Icon(
                 activeCampaign != null ? Icons.campaign : Icons.cloud_outlined,
-                size: 20,
-                color: activeCampaign != null
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.grey,
+                size: 22,
+                color: AppColors.muted,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -64,8 +64,9 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
                       ? activeCampaign.name
                       : 'No Campaign Selected',
                   style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: AppColors.ink,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -76,8 +77,10 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
                   tooltip: _isSelectingCards
                       ? 'Cancel card selection'
                       : 'Select cards to share',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
                   onPressed: _isSharingSelection
                       ? null
                       : () => setState(() {
@@ -88,19 +91,23 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
                 IconButton(
                   icon: const Icon(Icons.sync, size: 18),
                   tooltip: 'Push all outdated cards to campaign',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
                   onPressed: _isSharingSelection
                       ? null
                       : () => _pushAllOutdated(appState),
                 ),
               ],
-              const SizedBox(width: 6),
               IconButton(
-                icon: const Icon(Icons.settings, size: 18),
+                icon: const Icon(
+                  Icons.settings,
+                  size: 20,
+                  color: AppColors.matcha,
+                ),
                 tooltip: 'Campaigns & Sharing Settings',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                 onPressed: () {
                   showDialog(
                     context: context,
@@ -116,7 +123,10 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
                 Expanded(
                   child: Text(
                     '${_selectedCardIds.length} card(s) selected',
-                    style: const TextStyle(fontSize: 11),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.muted,
+                    ),
                   ),
                 ),
                 TextButton.icon(
@@ -275,22 +285,30 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
     final List<CueCard> filteredCueCards = appState.cueCards;
 
     return Container(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildCampaignBar(appState),
-          _buildTagList(),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: _buildAutocomplete(),
-          ),
-          Expanded(
-            child: filteredCueCards.isEmpty
-                ? _buildEmptyState()
-                : _buildCardListWithPagination(appState, filteredCueCards),
-          ),
-        ],
+      decoration: const BoxDecoration(
+        color: AppColors.sidebar,
+        border: Border(right: BorderSide(color: AppColors.hairline)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildCampaignBar(appState),
+            if (_selectedTags.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _buildTagList(),
+            ],
+            const SizedBox(height: 16),
+            SizedBox(height: 46, child: _buildAutocomplete()),
+            const SizedBox(height: 16),
+            Expanded(
+              child: filteredCueCards.isEmpty
+                  ? _buildEmptyState()
+                  : _buildCardListWithPagination(appState, filteredCueCards),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -323,7 +341,7 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
         });
 
         return ListView.builder(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           itemCount: filteredCueCards.length,
           itemBuilder: (context, index) {
             final cueCard = filteredCueCards[index];
@@ -392,19 +410,30 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
 
   Widget _buildPaginationControls(AppState appState) {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.only(top: 4, bottom: 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
             icon: const Icon(Icons.arrow_back),
+            color: AppColors.matcha,
+            tooltip: 'Previous page',
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            padding: EdgeInsets.zero,
             onPressed: appState.currentPage > 1
                 ? () => appState.goToPage(appState.currentPage - 1)
                 : null,
           ),
-          Text('Page ${appState.currentPage} of ${appState.totalPages}'),
+          Text(
+            'Page ${appState.currentPage} of ${appState.totalPages}',
+            style: const TextStyle(fontSize: 14, color: AppColors.muted),
+          ),
           IconButton(
             icon: const Icon(Icons.arrow_forward),
+            color: AppColors.matcha,
+            tooltip: 'Next page',
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            padding: EdgeInsets.zero,
             onPressed: appState.currentPage < appState.totalPages
                 ? () => appState.goToPage(appState.currentPage + 1)
                 : null,
@@ -416,22 +445,20 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
 
   Widget _buildTagList() {
     AppState appState = context.watch<AppState>();
-    return _selectedTags.isEmpty
-        ? const SizedBox(height: 32)
-        : Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _selectedTags.map((tag) {
-              void removeTag(Tag tag) {
-                setState(() {
-                  _selectedTags.remove(tag);
-                  _onSearchChanged(appState, null, _selectedTags);
-                });
-              }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _selectedTags.map((tag) {
+        void removeTag(Tag tag) {
+          setState(() {
+            _selectedTags.remove(tag);
+            _onSearchChanged(appState, null, _selectedTags);
+          });
+        }
 
-              return TagChip(tag: tag.name, onRemove: () => removeTag(tag));
-            }).toList(),
-          );
+        return TagChip(tag: tag.name, onRemove: () => removeTag(tag));
+      }).toList(),
+    );
   }
 
   Widget _buildAutocomplete() {
@@ -476,10 +503,32 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
             return TextField(
               controller: textEditingController,
               focusNode: textFocusNode,
-              decoration: const InputDecoration(
-                labelText: 'Search by tag or title',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.search),
+              style: const TextStyle(fontSize: 15, color: AppColors.ink),
+              decoration: InputDecoration(
+                hintText: 'Search by tag or title',
+                prefixIcon: const Icon(
+                  Icons.search,
+                  size: 18,
+                  color: AppColors.muted,
+                ),
+                filled: true,
+                fillColor: AppColors.paper,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.hairline),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.hairline),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(
+                    color: AppColors.matcha,
+                    width: 1.5,
+                  ),
+                ),
               ),
               onSubmitted: (String value) {
                 final tag = suggestions.firstWhere(
