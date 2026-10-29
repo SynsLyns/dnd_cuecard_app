@@ -130,6 +130,10 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
               onPressed: _openInitiativeTrackerInNewWindow,
               child: const Text('Initiative Tracker'),
             ),
+            OutlinedButton(
+              onPressed: _handleManageCategories,
+              child: const Text('Manage Categories'),
+            ),
             if (_selectedTab == 0) _buildViewEditModeToggle(),
           ];
           if (constraints.maxWidth < 900) {
@@ -300,10 +304,6 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
 
     final secondaryActions = <Widget>[
       OutlinedButton(onPressed: _handleNewCard, child: const Text('New Card')),
-      OutlinedButton(
-        onPressed: _handleManageCategories,
-        child: const Text('Manage Categories'),
-      ),
       if (selectedCard != null && hasActiveCampaign)
         OutlinedButton.icon(
           icon: Icon(

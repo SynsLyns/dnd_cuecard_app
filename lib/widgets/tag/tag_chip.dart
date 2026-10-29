@@ -28,7 +28,7 @@ class _TagChipState extends State<TagChip> {
             color: AppColors.sage,
             borderRadius: BorderRadius.circular(24),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.only(left: 12, right: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -61,17 +61,19 @@ class _TagChipState extends State<TagChip> {
                           child: Opacity(
                             opacity: progress,
                             child: SizedBox(
-                              width: 32,
-                              height: 32,
+                              width: 24,
+                              height: 24,
                               child: IgnorePointer(
                                 ignoring: progress < 1,
                                 child: IconButton(
                                   tooltip: 'Remove tag',
                                   onPressed: widget.onRemove,
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(
-                                    minWidth: 32,
-                                    minHeight: 32,
+                                  style: IconButton.styleFrom(
+                                    minimumSize: Size.zero,
+                                    padding: EdgeInsets.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    visualDensity: VisualDensity.compact,
                                   ),
                                   icon: const Icon(
                                     Icons.close,
