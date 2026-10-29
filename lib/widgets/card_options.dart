@@ -2,6 +2,7 @@ import 'package:dnd_cuecard_app/app_state.dart';
 import 'package:dnd_cuecard_app/models/card_type.dart';
 import 'package:dnd_cuecard_app/models/rarity.dart';
 import 'package:dnd_cuecard_app/screens/cue_card_form_controllers.dart';
+import 'package:dnd_cuecard_app/theme/app_colors.dart';
 import 'package:dnd_cuecard_app/widgets/categorizable_dropdown_menu.dart';
 import 'package:dnd_cuecard_app/widgets/tag/tag_input.dart';
 import 'package:flutter/material.dart';
@@ -14,9 +15,9 @@ class CardOptions extends StatelessWidget {
     required Function(CardType?) onCardTypeChanged,
     required Function(Rarity?) onRarityChanged,
     this.readOnly = false,
-  })  : _controllers = controllers,
-        _onCardTypeChanged = onCardTypeChanged,
-        _onRarityChanged = onRarityChanged;
+  }) : _controllers = controllers,
+       _onCardTypeChanged = onCardTypeChanged,
+       _onRarityChanged = onRarityChanged;
 
   final CueCardFormControllers _controllers;
   final Function(CardType?) _onCardTypeChanged;
@@ -25,10 +26,9 @@ class CardOptions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var appState = context.watch<AppState>();
+    final appState = context.watch<AppState>();
 
-    CategorizableDropdownMenu<CardType> cardTypeDropdown =
-        CategorizableDropdownMenu<CardType>(
+    final cardType = CategorizableDropdownMenu<CardType>(
       label: 'Card Type',
       controller: _controllers.cardTypeController,
       values: appState.cardTypes,
@@ -36,9 +36,7 @@ class CardOptions extends StatelessWidget {
       getColor: (item) => item.color,
       readOnly: readOnly,
     );
-
-    CategorizableDropdownMenu<Rarity> rarityDropdown =
-        CategorizableDropdownMenu<Rarity>(
+    final rarity = CategorizableDropdownMenu<Rarity>(
       label: 'Rarity',
       controller: _controllers.rarityController,
       values: appState.rarities,
@@ -46,30 +44,57 @@ class CardOptions extends StatelessWidget {
       getColor: (item) => item.color,
       readOnly: readOnly,
     );
-    
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Expanded(
-          flex: 4,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+    final tags = TagInputField(
+      selectedTags: _controllers.tags,
+      suggestions: appState.tags,
+      readOnly: readOnly,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 620) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(flex: 2, child: cardTypeDropdown),
-              const SizedBox(height: 8),
-              Expanded(flex: 2, child: rarityDropdown),
+              _field('CARD TYPE', cardType),
+              const SizedBox(height: 12),
+              _field('RARITY', rarity),
+              const SizedBox(height: 12),
+              _field('TAGS', tags),
             ],
-          )
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            SizedBox(width: 190, child: _field('CARD TYPE', cardType)),
+            const SizedBox(width: 16),
+            SizedBox(width: 190, child: _field('RARITY', rarity)),
+            const SizedBox(width: 16),
+            Expanded(child: _field('TAGS', tags)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _field(String label, Widget child) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.muted,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.48,
+            ),
+          ),
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          flex: 10,
-          child: TagInputField(
-            selectedTags: _controllers.tags,
-            suggestions: appState.tags,
-            readOnly: readOnly,
-          )
-        )
+        SizedBox(height: 44, child: child),
       ],
     );
   }

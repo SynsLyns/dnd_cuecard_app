@@ -1,8 +1,13 @@
 import 'package:dnd_cuecard_app/interfaces/nameable.dart';
 import 'package:dnd_cuecard_app/widgets/autocomplete/autocomplete_options.dart';
 import 'package:dnd_cuecard_app/widgets/autocomplete/autocomplete.dart';
-import 'package:dnd_cuecard_app/widgets/labeled_value.dart';
-import 'package:flutter/material.dart' hide RawAutocomplete, AutocompleteOnSelected, OptionsViewOpenDirection, AutocompleteHighlightedOption;
+import 'package:dnd_cuecard_app/theme/app_colors.dart';
+import 'package:flutter/material.dart'
+    hide
+        RawAutocomplete,
+        AutocompleteOnSelected,
+        OptionsViewOpenDirection,
+        AutocompleteHighlightedOption;
 
 class CategorizableDropdownMenu<T extends Nameable> extends StatefulWidget {
   const CategorizableDropdownMenu({
@@ -23,10 +28,12 @@ class CategorizableDropdownMenu<T extends Nameable> extends StatefulWidget {
   final bool readOnly;
 
   @override
-  State<CategorizableDropdownMenu<T>> createState() => _CategorizableDropdownMenuState<T>();
+  State<CategorizableDropdownMenu<T>> createState() =>
+      _CategorizableDropdownMenuState<T>();
 }
 
-class _CategorizableDropdownMenuState<T extends Nameable> extends State<CategorizableDropdownMenu<T>> {
+class _CategorizableDropdownMenuState<T extends Nameable>
+    extends State<CategorizableDropdownMenu<T>> {
   String? _selectedName;
   final FocusNode _focusNode = FocusNode();
   bool _isFirstFocus = true;
@@ -80,13 +87,25 @@ class _CategorizableDropdownMenuState<T extends Nameable> extends State<Categori
 
   @override
   Widget build(BuildContext context) {
-    return widget.readOnly
-        ? _buildViewMode()
-        : _buildEditMode();
+    return widget.readOnly ? _buildViewMode() : _buildEditMode();
   }
 
   Widget _buildViewMode() {
-    return LabeledValue(label: widget.label, value: widget.controller.text);
+    return Container(
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppColors.paper,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        widget.controller.text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: 15, color: AppColors.ink),
+      ),
+    );
   }
 
   Widget _buildEditMode() {
@@ -107,33 +126,59 @@ class _CategorizableDropdownMenuState<T extends Nameable> extends State<Categori
           _isFirstFocus = false;
           return widget.values;
         }
-        return widget.values.where((option) =>
-            option.name.toLowerCase().contains(textEditingValue.text.toLowerCase()));
-      },
-      optionsViewBuilder: (BuildContext context, AutocompleteOnSelected<T> onSelected, Iterable<T> options) {
-        return AutocompleteOptions<T>(
-          displayStringForOption: (option) => option.name,
-          onSelected: onSelected,
-          options: options,
-          openDirection: OptionsViewOpenDirection.down,
-          optionsMaxHeight: 200,
-          getColor: widget.getColor,
+        return widget.values.where(
+          (option) => option.name.toLowerCase().contains(
+            textEditingValue.text.toLowerCase(),
+          ),
         );
       },
+      optionsViewBuilder:
+          (
+            BuildContext context,
+            AutocompleteOnSelected<T> onSelected,
+            Iterable<T> options,
+          ) {
+            return AutocompleteOptions<T>(
+              displayStringForOption: (option) => option.name,
+              onSelected: onSelected,
+              options: options,
+              openDirection: OptionsViewOpenDirection.down,
+              optionsMaxHeight: 200,
+              getColor: widget.getColor,
+            );
+          },
       fieldViewBuilder:
           (context, textEditingController, textFocusNode, onFieldSubmitted) {
-        return TextFormField(
-          controller: textEditingController,
-          focusNode: textFocusNode,
-          decoration: InputDecoration(
-            labelText: widget.label,
-            border: OutlineInputBorder(),
-          ),
-          onFieldSubmitted: (String value) {
-            onFieldSubmitted();
+            return TextFormField(
+              controller: textEditingController,
+              focusNode: textFocusNode,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: AppColors.matcha,
+                    width: 1.5,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                isDense: true,
+              ),
+              onFieldSubmitted: (String value) {
+                onFieldSubmitted();
+              },
+            );
           },
-        );
-      },
     );
   }
 }

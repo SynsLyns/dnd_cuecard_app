@@ -1,71 +1,75 @@
+import 'package:dnd_cuecard_app/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class TagChip extends StatefulWidget {
+  const TagChip({super.key, required this.tag, this.onRemove});
+
   final String tag;
   final VoidCallback? onRemove;
-
-  const TagChip({
-    super.key,
-    required this.tag,
-    this.onRemove,
-  });
 
   @override
   State<TagChip> createState() => _TagChipState();
 }
 
 class _TagChipState extends State<TagChip> {
-  bool isHovered = false;
+  bool _isHovered = false;
+  bool _isFocused = false;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => isHovered = true),
-      onHover: (_) => setState(() => isHovered = true),
-      onExit: (_) => setState(() => isHovered = false),
-      child: Container(
-        decoration: BoxDecoration(
-          color: colorScheme.secondaryContainer,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              widget.tag,
-              style: TextStyle(color: colorScheme.onSecondaryContainer),
-            ),
-            AnimatedSize(
-              duration: const Duration(milliseconds: 100),
-              child: TweenAnimationBuilder<double>(
-                tween: Tween<double>(begin: 0, end: (isHovered && widget.onRemove != null) ? 1 : 0),
-                duration: const Duration(milliseconds: 100),
-                builder: (context, width, child) {
-                  bool showIcon = width >= 1;
-                  if (isHovered && widget.onRemove != null) {
-                    return Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SizedBox(width: 3),
-                        AnimatedOpacity(
-                          opacity: showIcon ? 1 : 0,
-                          duration: const Duration(milliseconds: 100),
-                          child: GestureDetector(
-                            onTap: widget.onRemove,
-                            child: const Icon(Icons.close, size: 16),
-                          ),
-                        ),
-                      ],
-                    );
-                  }
-                  return const SizedBox();
-                },
+    final showRemove = _isHovered || _isFocused;
+    return Focus(
+      onFocusChange: (focused) => setState(() => _isFocused = focused),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.sage,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                widget.tag,
+                style: const TextStyle(
+                  color: AppColors.matcha,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-          ],
+              if (widget.onRemove != null) ...[
+                const SizedBox(width: 4),
+                SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: IgnorePointer(
+                    ignoring: !showRemove,
+                    child: AnimatedOpacity(
+                      opacity: showRemove ? 1 : 0,
+                      duration: const Duration(milliseconds: 100),
+                      child: IconButton(
+                        tooltip: 'Remove tag',
+                        onPressed: widget.onRemove,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                        icon: const Icon(
+                          Icons.close,
+                          size: 16,
+                          color: AppColors.matcha,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
