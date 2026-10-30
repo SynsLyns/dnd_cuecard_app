@@ -46,12 +46,15 @@ if (-not $branch) {
     throw 'The local gh-pages branch is missing. Fetch it from origin before publishing.'
 }
 
-$worktreeRoot = & git -C $repoRoot -C $releaseRoot rev-parse --show-toplevel 2>$null
-if ($LASTEXITCODE -ne 0) {
-    if (Test-Path -LiteralPath $releaseRoot) {
+$worktreeRoot = $null
+if (Test-Path -LiteralPath $releaseRoot) {
+    $worktreeRoot = & git -C $releaseRoot rev-parse --show-toplevel
+    if ($LASTEXITCODE -ne 0) {
         throw "PagesWorktreePath exists but is not a Git worktree: $releaseRoot"
     }
+}
 
+if (-not $worktreeRoot) {
     & git -C $repoRoot worktree add $releaseRoot gh-pages
     if ($LASTEXITCODE -ne 0) {
         throw "Could not create a gh-pages worktree at $releaseRoot."
