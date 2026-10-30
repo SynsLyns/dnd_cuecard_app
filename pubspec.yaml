@@ -127,7 +127,7 @@ msix_config:
   install_certificate: false
   protocol_activation: dndcuecard
   app_installer:
-    hours_between_update_checks: 0
+    hours_between_update_checks: 24
     automatic_background_task: true
     update_blocks_activation: false
-    show_prompt: true
+    show_prompt: false

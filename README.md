@@ -144,7 +144,9 @@ the PFX, creates or uses a separate local worktree of `gh-pages`, runs
 Pages URLs, and copies a per-user certificate setup script into the worktree.
 Review the generated files, then run the printed Git commands to commit and
 push the release. The MSIX tool's `publish` command is required to generate the
-`.appinstaller`; `msix:create` alone only creates the package.
+`.appinstaller`; `msix:create` alone only creates the package. Installed apps
+check for updates at most once per 24 hours on launch, with background update
+checks enabled and update prompts disabled.
 
 ### Google OAuth redirect setup
 
