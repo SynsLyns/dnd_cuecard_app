@@ -200,11 +200,30 @@ if ($mainPackage.GetAttribute('Version') -ne $version) {
 }
 
 $baseUrl = $PagesBaseUrl.AbsoluteUri.TrimEnd('/')
-$installerUrl = "$baseUrl/$([uri]::EscapeDataString("$appName.appinstaller"))"
+$installerFileName = "$appName.appinstaller"
+$installerUrl = "$baseUrl/$([uri]::EscapeDataString($installerFileName))"
 $packageUrl = "$baseUrl/versions/$([uri]::EscapeDataString($versionedPackageName))"
 $installer.DocumentElement.SetAttribute('Uri', $installerUrl)
 $mainPackage.SetAttribute('Uri', $packageUrl)
 $installer.Save($installerPath)
+
+$websitePath = Join-Path $releaseRoot 'index.html'
+if (-not (Test-Path -LiteralPath $websitePath -PathType Leaf)) {
+    throw "MSIX publish did not create the release website: $websitePath"
+}
+$website = Get-Content -LiteralPath $websitePath -Raw
+$installerFilePattern = [regex]::Escape($installerFileName)
+$installLinkPattern = "a\.href\s*=\s*['""]/?$installerFilePattern['""]\s*;"
+$installLinkMatches = [regex]::Matches($website, $installLinkPattern)
+if ($installLinkMatches.Count -ne 1) {
+    throw "Expected one generated install link for $installerFileName, found $($installLinkMatches.Count)."
+}
+$website = [regex]::Replace(
+    $website,
+    $installLinkPattern,
+    "a.href = '$installerUrl';"
+)
+Set-Content -LiteralPath $websitePath -Value $website -Encoding UTF8
 
 Copy-Item -LiteralPath $publicCertificatePath -Destination (Join-Path $releaseRoot 'certificate.crt') -Force
 $setupScript = @'
