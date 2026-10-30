@@ -1,10 +1,9 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [string]$ReleaseRepoPath,
+    [uri]$PagesBaseUrl,
 
-    [Parameter(Mandatory = $true)]
-    [uri]$PagesBaseUrl
+    [string]$PagesWorktreePath = (Join-Path $env:TEMP 'dnd_cuecard_app-gh-pages')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -24,23 +23,50 @@ function Invoke-CheckedCommand {
 }
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$releaseRoot = (Resolve-Path $ReleaseRepoPath).Path
-$releaseGitRoot = & git -C $releaseRoot rev-parse --show-toplevel
+$gitRoot = & git -C $repoRoot rev-parse --show-toplevel
 if ($LASTEXITCODE -ne 0) {
-    throw "ReleaseRepoPath must be a Git repository: $releaseRoot"
+    throw "Unable to locate the source Git repository: $repoRoot"
 }
-$releaseGitRoot = ($releaseGitRoot | Select-Object -First 1).Trim()
+$gitRoot = ($gitRoot | Select-Object -First 1).Trim()
+$releaseRoot = [System.IO.Path]::GetFullPath($PagesWorktreePath)
 
-if ([string]::Equals(
-        $repoRoot.TrimEnd('\'),
-        $releaseGitRoot.TrimEnd('\'),
-        [StringComparison]::OrdinalIgnoreCase
-    )) {
-    throw 'The release repository must be separate from the source repository.'
+if ([string]::Equals($repoRoot.TrimEnd('\'), $releaseRoot.TrimEnd('\'), [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'PagesWorktreePath must be separate from the source working tree.'
 }
 
 if ($PagesBaseUrl.Scheme -ne 'https' -or $PagesBaseUrl.Query -or $PagesBaseUrl.Fragment) {
     throw 'PagesBaseUrl must be an HTTPS URL without a query or fragment.'
+}
+
+$branch = & git -C $repoRoot branch --list gh-pages
+if ($LASTEXITCODE -ne 0) {
+    throw 'Unable to check for the local gh-pages branch.'
+}
+if (-not $branch) {
+    throw 'The local gh-pages branch is missing. Fetch it from origin before publishing.'
+}
+
+$worktreeRoot = & git -C $repoRoot -C $releaseRoot rev-parse --show-toplevel 2>$null
+if ($LASTEXITCODE -ne 0) {
+    if (Test-Path -LiteralPath $releaseRoot) {
+        throw "PagesWorktreePath exists but is not a Git worktree: $releaseRoot"
+    }
+
+    & git -C $repoRoot worktree add $releaseRoot gh-pages
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not create a gh-pages worktree at $releaseRoot."
+    }
+}
+else {
+    $worktreeRoot = ($worktreeRoot | Select-Object -First 1).Trim()
+    if (-not [string]::Equals($worktreeRoot.TrimEnd('\'), $gitRoot.TrimEnd('\'), [StringComparison]::OrdinalIgnoreCase)) {
+        throw "PagesWorktreePath belongs to a different Git repository: $worktreeRoot"
+    }
+
+    $worktreeBranch = & git -C $releaseRoot branch --show-current
+    if ($LASTEXITCODE -ne 0 -or $worktreeBranch.Trim() -ne 'gh-pages') {
+        throw 'PagesWorktreePath must be checked out to the gh-pages branch.'
+    }
 }
 
 $releaseStatus = @(& git -C $releaseRoot status --porcelain --untracked-files=all)
@@ -176,4 +202,7 @@ Set-Content -LiteralPath (Join-Path $releaseRoot 'install.ps1') -Value $setupScr
 Write-Host "Release files prepared in $releaseRoot"
 Write-Host "App Installer: $installerUrl"
 Write-Host "MSIX package:  $packageUrl"
-Write-Host 'Review the release repository, then commit and push its release files to deploy them with GitHub Pages.'
+Write-Host 'Review the files, then commit and push the gh-pages worktree to deploy them with GitHub Pages.'
+Write-Host "  git -C `"$releaseRoot`" add ."
+Write-Host "  git -C `"$releaseRoot`" commit -m `"Release $version`""
+Write-Host "  git -C `"$releaseRoot`" push origin gh-pages"

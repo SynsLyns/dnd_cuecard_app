@@ -125,26 +125,26 @@ Supabase service-role key in a GitHub variable, secret, or web build.
 
 ## Publish Windows MSIX updates with GitHub Pages
 
-Create a separate **public** GitHub repository for release files, enable Pages
-from its `main` branch and root folder, and clone it locally. Keep the signing
-PFX in the ignored `certificates` folder. Do not add its password or PFX to
-either repository.
+Enable GitHub Pages for this repository from the `gh-pages` branch and root
+folder. The branch is separate from `main` and contains only published release
+files. Keep the signing PFX in the ignored `certificates` folder. Do not add
+its password or PFX to the repository.
 
 Before each release, bump `msix_version` in `pubspec.yaml` to a higher
 four-part version. From the source repository, run:
 
 ```powershell
 .\scripts\publish-msix.ps1 `
-  -ReleaseRepoPath C:\path\to\local\release-repo `
-  -PagesBaseUrl https://<username>.github.io/<release-repo>/
+  -PagesBaseUrl https://synslyns.github.io/dnd_cuecard_app/
 ```
 
 The script prompts for the PFX password, checks that the public `.crt` matches
-the PFX, runs `dart run msix:publish`, rewrites both `.appinstaller` package
-URIs to HTTPS Pages URLs, and copies a per-user certificate setup script into
-the release repository. Review the generated files, then commit and push the
-release repository to publish. The MSIX tool's `publish` command is required
-to generate the `.appinstaller`; `msix:create` alone only creates the package.
+the PFX, creates or uses a separate local worktree of `gh-pages`, runs
+`dart run msix:publish`, rewrites both `.appinstaller` package URIs to HTTPS
+Pages URLs, and copies a per-user certificate setup script into the worktree.
+Review the generated files, then run the printed Git commands to commit and
+push the release. The MSIX tool's `publish` command is required to generate the
+`.appinstaller`; `msix:create` alone only creates the package.
 
 ### Google OAuth redirect setup
 
