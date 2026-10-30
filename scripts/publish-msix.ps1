@@ -62,8 +62,34 @@ if (-not $worktreeRoot) {
 }
 else {
     $worktreeRoot = ($worktreeRoot | Select-Object -First 1).Trim()
-    if (-not [string]::Equals($worktreeRoot.TrimEnd('\'), $gitRoot.TrimEnd('\'), [StringComparison]::OrdinalIgnoreCase)) {
-        throw "PagesWorktreePath belongs to a different Git repository: $worktreeRoot"
+    $normalizedWorktreeRoot = $worktreeRoot.Replace('/', '\').TrimEnd('\')
+    $normalizedReleaseRoot = $releaseRoot.Replace('/', '\').TrimEnd('\')
+    if (-not [string]::Equals($normalizedWorktreeRoot, $normalizedReleaseRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Git reports a different worktree root than PagesWorktreePath: $worktreeRoot"
+    }
+
+    $worktreeGitRoot = & git -C $releaseRoot rev-parse --git-common-dir
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to verify the Git repository for PagesWorktreePath: $releaseRoot"
+    }
+    $worktreeGitRoot = ($worktreeGitRoot | Select-Object -First 1).Trim()
+    if (-not [System.IO.Path]::IsPathRooted($worktreeGitRoot)) {
+        $worktreeGitRoot = [System.IO.Path]::GetFullPath((Join-Path $releaseRoot $worktreeGitRoot))
+    }
+    $worktreeGitRoot = (Resolve-Path $worktreeGitRoot).Path
+    $sourceGitCommonDir = & git -C $repoRoot rev-parse --git-common-dir
+    if ($LASTEXITCODE -ne 0) {
+        throw "Unable to verify the source Git repository: $repoRoot"
+    }
+    $sourceGitCommonDir = ($sourceGitCommonDir | Select-Object -First 1).Trim()
+    if (-not [System.IO.Path]::IsPathRooted($sourceGitCommonDir)) {
+        $sourceGitCommonDir = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $sourceGitCommonDir))
+    }
+    $sourceGitCommonDir = (Resolve-Path $sourceGitCommonDir).Path
+    $normalizedWorktreeGitRoot = $worktreeGitRoot.Replace('/', '\').TrimEnd('\')
+    $normalizedSourceGitCommonDir = $sourceGitCommonDir.Replace('/', '\').TrimEnd('\')
+    if (-not [string]::Equals($normalizedWorktreeGitRoot, $normalizedSourceGitCommonDir, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "PagesWorktreePath belongs to a different Git repository: $releaseRoot"
     }
 
     $worktreeBranch = & git -C $releaseRoot branch --show-current
