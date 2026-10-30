@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:dnd_cuecard_app/logic/supabase_service.dart';
 import 'initiative_item.dart';
@@ -8,14 +12,90 @@ class InitiativeAppState extends ChangeNotifier {
 
   final String? campaignId;
   final SupabaseService _supabaseService = SupabaseService();
+  late final SharedPreferencesAsync _preferences = SharedPreferencesAsync();
 
   List<InitiativeItem> initiativeItems = [];
   int currentTurnIndex = 0;
+  bool isLoadingSavedState = false;
+  String? persistenceError;
   bool isSyncing = false;
   String? syncError;
   Future<void> _syncQueue = Future<void>.value();
+  Future<void> _persistenceQueue = Future<void>.value();
+  Future<void>? _initialization;
+  bool _hasLoadedSavedState = false;
   bool _isEnding = false;
   bool _isDisposed = false;
+
+  String get _persistenceKey => 'initiative_encounter_${campaignId ?? 'local'}';
+
+  Future<void> initialize() => _initialization ??= _loadSavedState();
+
+  Future<void> flushPendingPersistence() => _persistenceQueue;
+
+  Future<void> _loadSavedState() async {
+    isLoadingSavedState = true;
+    notifyListeners();
+    try {
+      final savedState = await _preferences.getString(_persistenceKey);
+      if (savedState != null) {
+        final decoded = jsonDecode(savedState);
+        if (decoded is! Map<String, dynamic> ||
+            decoded['schema_version'] != 1 ||
+            decoded['combatants'] is! List ||
+            decoded['current_turn_index'] is! int) {
+          throw const FormatException('Invalid saved initiative encounter.');
+        }
+
+        final savedItems = (decoded['combatants'] as List).map((combatant) {
+          if (combatant is! Map) {
+            throw const FormatException('Invalid saved initiative item.');
+          }
+          return InitiativeItem.fromJson(Map<String, dynamic>.from(combatant));
+        }).toList();
+        final savedTurnIndex = decoded['current_turn_index'] as int;
+        if (savedItems.isEmpty
+            ? savedTurnIndex != 0
+            : savedTurnIndex < 0 || savedTurnIndex >= savedItems.length) {
+          throw const FormatException('Invalid saved initiative turn.');
+        }
+
+        initiativeItems = savedItems;
+        currentTurnIndex = savedTurnIndex;
+      }
+      _hasLoadedSavedState = true;
+      persistenceError = null;
+    } catch (exception) {
+      persistenceError = 'Could not restore the saved encounter: $exception';
+      _hasLoadedSavedState = true;
+    } finally {
+      isLoadingSavedState = false;
+      if (!_isDisposed) notifyListeners();
+    }
+  }
+
+  Future<void> _persistSavedState() {
+    if (!_hasLoadedSavedState || _isDisposed) return Future<void>.value();
+
+    final snapshot = jsonEncode({
+      'schema_version': 1,
+      'current_turn_index': currentTurnIndex,
+      'combatants': initiativeItems.map((item) => item.toJson()).toList(),
+    });
+    _persistenceQueue = _persistenceQueue.then((_) async {
+      try {
+        await _preferences.setString(_persistenceKey, snapshot);
+        if (persistenceError != null) {
+          persistenceError = null;
+          if (!_isDisposed) notifyListeners();
+        }
+      } catch (exception) {
+        persistenceError = 'Could not save the encounter locally: $exception';
+        if (!_isDisposed) notifyListeners();
+      }
+    });
+    return _persistenceQueue;
+  }
 
   void addInitiativeItem(InitiativeItem item) {
     final currentItem =
@@ -167,6 +247,7 @@ class InitiativeAppState extends ChangeNotifier {
   Future<void> endEncounter() async {
     _isEnding = true;
     await _syncQueue;
+    await _persistenceQueue;
     try {
       final id = campaignId;
       if (id != null) {
@@ -175,6 +256,7 @@ class InitiativeAppState extends ChangeNotifier {
       initiativeItems.clear();
       currentTurnIndex = 0;
       syncError = null;
+      await _persistSavedState();
     } catch (exception) {
       syncError = 'Could not end the shared encounter: $exception';
     } finally {
@@ -185,6 +267,7 @@ class InitiativeAppState extends ChangeNotifier {
 
   void _notifyAndSync() {
     notifyListeners();
+    unawaited(_persistSavedState());
     final id = campaignId;
     if (id == null || _isEnding) return;
 

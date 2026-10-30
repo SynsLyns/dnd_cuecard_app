@@ -64,8 +64,8 @@ Limited, or Full. Hidden combatants are omitted entirely. Limited shares name,
 initiative, current-turn marker, and a health label. Full additionally shares
 exact HP, exhaustion, concentration, reaction state, capacity, and cooldowns.
 The shared encounter stays available to players until the DM uses **End
-combat**. The tracker's full DM state remains in memory only and is not restored
-after restarting the desktop app.
+combat**. The tracker's full DM state is saved locally per campaign, restored
+when the tracker is reopened, and cleared when **End combat** succeeds.
 
 ## Run the player web app
 
@@ -125,14 +125,19 @@ Supabase service-role key in a GitHub variable, secret, or web build.
 
 ### Google OAuth redirect setup
 
-Add the player site's origin (for example, `https://cards.example.com`) to
-Supabase **Authentication → URL Configuration → Redirect URLs**. Configure
-the Google OAuth client's authorized redirect URI as
+Add the player site's origin to Supabase
+**Authentication → URL Configuration → Redirect URLs**. For the default
+Cloudflare Worker deployment, allow
+`https://dnd-cuecard-app.synslyns.workers.dev/`; add any custom domain or local
+development origin you use as well. Configure the Google OAuth client's
+authorized redirect URI as
 `https://<project-ref>.supabase.co/auth/v1/callback`. For the packaged Windows
 DM app, build/install the MSIX package so the `dndcuecard://login-callback`
 protocol is registered; allow that URI in Supabase's redirect URL list.
 Google OAuth is opened in the system browser, and the callback is forwarded to
-the running desktop app if one is already open.
+the running desktop app if one is already open. On the web, Supabase returns a
+temporary `code` query parameter which the SDK exchanges for a session; do not
+use that parameter as the campaign join code.
 
 ## Tests and RLS verification
 

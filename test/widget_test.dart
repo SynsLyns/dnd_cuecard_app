@@ -116,5 +116,24 @@ void main() {
 
       expect(find.text('Necromancy'), findsOneWidget);
     });
+
+    testWidgets('view-mode tag chip has balanced horizontal padding', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: TagChip(tag: 'Water')),
+        ),
+      );
+
+      final chipRect = tester.getRect(
+        find.byKey(const ValueKey('tag-chip-Water')),
+      );
+      final textRect = tester.getRect(find.text('Water'));
+      expect(
+        textRect.left - chipRect.left,
+        closeTo(chipRect.right - textRect.right, 0.1),
+      );
+    });
   });
 }

@@ -9,8 +9,8 @@ import 'package:dnd_cuecard_app/widgets/tag/tag_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:dnd_cuecard_app/widgets/cue_card/hoverable_cue_card.dart';
+import 'package:dnd_cuecard_app/theme/app_colors.dart';
 import 'campaign_management_dialog.dart';
-import 'campaign_player_selection_dialog.dart';
 
 class CueCardLibraryView extends StatefulWidget {
   const CueCardLibraryView({super.key});
@@ -21,10 +21,8 @@ class CueCardLibraryView extends StatefulWidget {
 
 class _CueCardLibraryViewState extends State<CueCardLibraryView> {
   final List<Tag> _selectedTags = [];
-  final Set<int> _selectedCardIds = {};
   int _cueCardsPerPage = 1;
-  bool _isSelectingCards = false;
-  bool _isSharingSelection = false;
+  bool _isPushingUpdates = false;
 
   Timer? _debounce;
 
@@ -35,27 +33,26 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
     });
   }
 
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
   Widget _buildCampaignBar(AppState appState) {
     final activeCampaign = appState.activeCampaign;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHigh,
-        border: Border(
-          bottom: BorderSide(color: Theme.of(context).dividerColor),
-        ),
-      ),
+      padding: EdgeInsets.zero,
+      decoration: BoxDecoration(color: AppColors.sidebar),
       child: Column(
         children: [
           Row(
             children: [
               Icon(
                 activeCampaign != null ? Icons.campaign : Icons.cloud_outlined,
-                size: 20,
-                color: activeCampaign != null
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.grey,
+                size: 22,
+                color: AppColors.muted,
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -64,43 +61,34 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
                       ? activeCampaign.name
                       : 'No Campaign Selected',
                   style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: AppColors.ink,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (activeCampaign != null) ...[
                 IconButton(
-                  icon: const Icon(Icons.checklist, size: 18),
-                  tooltip: _isSelectingCards
-                      ? 'Cancel card selection'
-                      : 'Select cards to share',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  onPressed: _isSharingSelection
-                      ? null
-                      : () => setState(() {
-                          _isSelectingCards = !_isSelectingCards;
-                          _selectedCardIds.clear();
-                        }),
-                ),
-                IconButton(
                   icon: const Icon(Icons.sync, size: 18),
                   tooltip: 'Push all outdated cards to campaign',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  onPressed: _isSharingSelection
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
+                  onPressed: _isPushingUpdates
                       ? null
                       : () => _pushAllOutdated(appState),
                 ),
               ],
-              const SizedBox(width: 6),
               IconButton(
-                icon: const Icon(Icons.settings, size: 18),
+                icon: const Icon(
+                  Icons.settings,
+                  size: 20,
+                  color: AppColors.matcha,
+                ),
                 tooltip: 'Campaigns & Sharing Settings',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                 onPressed: () {
                   showDialog(
                     context: context,
@@ -110,37 +98,13 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
               ),
             ],
           ),
-          if (activeCampaign != null && _isSelectingCards)
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${_selectedCardIds.length} card(s) selected',
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                ),
-                TextButton.icon(
-                  icon: _isSharingSelection
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.share, size: 16),
-                  label: const Text('Share selected'),
-                  onPressed: _selectedCardIds.isEmpty || _isSharingSelection
-                      ? null
-                      : () => _shareSelectedCards(appState),
-                ),
-              ],
-            ),
         ],
       ),
     );
   }
 
   Future<void> _pushAllOutdated(AppState appState) async {
-    setState(() => _isSharingSelection = true);
+    setState(() => _isPushingUpdates = true);
     try {
       final result = await appState.pushAllOutdatedCards();
       if (mounted) {
@@ -158,60 +122,7 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isSharingSelection = false);
-    }
-  }
-
-  Future<void> _shareSelectedCards(AppState appState) async {
-    setState(() => _isSharingSelection = true);
-    try {
-      final cards = await appState.getCardsByIds(_selectedCardIds);
-      if (!mounted) return;
-      final cardsNeedingRecipients = cards
-          .where(
-            (card) =>
-                appState.getCardShareStatus(card) == CardShareStatus.notShared,
-          )
-          .toList();
-      Set<String>? recipientIds;
-      if (cardsNeedingRecipients.isNotEmpty) {
-        final campaign = appState.activeCampaign;
-        if (campaign == null) {
-          throw CloudSharingException('No campaign selected.');
-        }
-        recipientIds = await showCampaignPlayerSelectionDialog(
-          context,
-          campaign: campaign,
-          cardTitle: cardsNeedingRecipients.length == 1
-              ? cardsNeedingRecipients.single.title ?? 'Untitled'
-              : '${cardsNeedingRecipients.length} selected cards',
-        );
-        if (recipientIds == null) return;
-      }
-      final result = await appState.shareCards(
-        cards,
-        recipientIds: recipientIds,
-      );
-      if (mounted) {
-        await _showBatchResult('Share selected cards', result);
-        setState(() {
-          _selectedCardIds.clear();
-          _isSelectingCards = false;
-        });
-      }
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Could not share selected cards: '
-              '${CloudSharingException.userMessage(error)}',
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isSharingSelection = false);
+      if (mounted) setState(() => _isPushingUpdates = false);
     }
   }
 
@@ -275,22 +186,27 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
     final List<CueCard> filteredCueCards = appState.cueCards;
 
     return Container(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildCampaignBar(appState),
-          _buildTagList(),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: _buildAutocomplete(),
-          ),
-          Expanded(
-            child: filteredCueCards.isEmpty
-                ? _buildEmptyState()
-                : _buildCardListWithPagination(appState, filteredCueCards),
-          ),
-        ],
+      color: AppColors.sidebar,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildCampaignBar(appState),
+            if (_selectedTags.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _buildTagList(),
+            ],
+            const SizedBox(height: 16),
+            SizedBox(height: 46, child: _buildAutocomplete()),
+            const SizedBox(height: 16),
+            Expanded(
+              child: filteredCueCards.isEmpty
+                  ? _buildEmptyState()
+                  : _buildCardListWithPagination(appState, filteredCueCards),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -323,7 +239,7 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
         });
 
         return ListView.builder(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           itemCount: filteredCueCards.length,
           itemBuilder: (context, index) {
             final cueCard = filteredCueCards[index];
@@ -335,22 +251,7 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
   }
 
   Widget _buildCardItem(CueCard cueCard, AppState appState) {
-    final selectionMode =
-        _isSelectingCards && appState.activeCampaignId != null;
-    final cardWidget = HoverableCueCard(
-      cueCard: cueCard,
-      selectionMode: selectionMode,
-      isSelected: cueCard.id != null && _selectedCardIds.contains(cueCard.id),
-      onSelectionChanged: cueCard.id == null
-          ? null
-          : (selected) => setState(() {
-              if (selected) {
-                _selectedCardIds.add(cueCard.id!);
-              } else {
-                _selectedCardIds.remove(cueCard.id);
-              }
-            }),
-    );
+    final cardWidget = HoverableCueCard(cueCard: cueCard);
 
     if (appState.isRelationshipMode) {
       return Draggable<CueCard>(
@@ -392,19 +293,30 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
 
   Widget _buildPaginationControls(AppState appState) {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.only(top: 4, bottom: 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
             icon: const Icon(Icons.arrow_back),
+            color: AppColors.matcha,
+            tooltip: 'Previous page',
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            padding: EdgeInsets.zero,
             onPressed: appState.currentPage > 1
                 ? () => appState.goToPage(appState.currentPage - 1)
                 : null,
           ),
-          Text('Page ${appState.currentPage} of ${appState.totalPages}'),
+          Text(
+            'Page ${appState.currentPage} of ${appState.totalPages}',
+            style: const TextStyle(fontSize: 14, color: AppColors.muted),
+          ),
           IconButton(
             icon: const Icon(Icons.arrow_forward),
+            color: AppColors.matcha,
+            tooltip: 'Next page',
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            padding: EdgeInsets.zero,
             onPressed: appState.currentPage < appState.totalPages
                 ? () => appState.goToPage(appState.currentPage + 1)
                 : null,
@@ -416,22 +328,20 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
 
   Widget _buildTagList() {
     AppState appState = context.watch<AppState>();
-    return _selectedTags.isEmpty
-        ? const SizedBox(height: 32)
-        : Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _selectedTags.map((tag) {
-              void removeTag(Tag tag) {
-                setState(() {
-                  _selectedTags.remove(tag);
-                  _onSearchChanged(appState, null, _selectedTags);
-                });
-              }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _selectedTags.map((tag) {
+        void removeTag(Tag tag) {
+          setState(() {
+            _selectedTags.remove(tag);
+            _onSearchChanged(appState, null, _selectedTags);
+          });
+        }
 
-              return TagChip(tag: tag.name, onRemove: () => removeTag(tag));
-            }).toList(),
-          );
+        return TagChip(tag: tag.name, onRemove: () => removeTag(tag));
+      }).toList(),
+    );
   }
 
   Widget _buildAutocomplete() {
@@ -476,10 +386,32 @@ class _CueCardLibraryViewState extends State<CueCardLibraryView> {
             return TextField(
               controller: textEditingController,
               focusNode: textFocusNode,
-              decoration: const InputDecoration(
-                labelText: 'Search by tag or title',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.search),
+              style: const TextStyle(fontSize: 15, color: AppColors.ink),
+              decoration: InputDecoration(
+                hintText: 'Search by tag or title',
+                prefixIcon: const Icon(
+                  Icons.search,
+                  size: 18,
+                  color: AppColors.muted,
+                ),
+                filled: true,
+                fillColor: AppColors.paper,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.hairline),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.hairline),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(
+                    color: AppColors.matcha,
+                    width: 1.5,
+                  ),
+                ),
               ),
               onSubmitted: (String value) {
                 final tag = suggestions.firstWhere(

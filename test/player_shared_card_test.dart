@@ -63,5 +63,20 @@ void main() {
       expect(card.schemaVersion, 1);
       expect(card.version, 1);
     });
+
+    test('searches card titles and tags case-insensitively', () {
+      final card = PlayerSharedCard.fromMap({
+        'id': 'searchable',
+        'payload': {
+          'title': 'Beginner Water Magic',
+          'tags': ['Evocation', 'Water'],
+        },
+      });
+
+      expect(card.matchesSearch('water magic'), isTrue);
+      expect(card.matchesSearch('EVO'), isTrue);
+      expect(card.matchesSearch('weapon'), isFalse);
+      expect(card.matchesSearch('  '), isTrue);
+    });
   });
 }

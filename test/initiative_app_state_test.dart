@@ -2,9 +2,58 @@ import 'package:dnd_cuecard_app/models/initiative_app_state.dart';
 import 'package:dnd_cuecard_app/models/initiative_item.dart';
 import 'package:dnd_cuecard_app/player/models/player_initiative.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 void main() {
   group('initiative player projection', () {
+    setUp(() {
+      SharedPreferencesAsyncPlatform.instance =
+          InMemorySharedPreferencesAsync.empty();
+    });
+
+    test('restores a saved encounter and clears it when combat ends', () async {
+      final original = InitiativeAppState();
+      await original.initialize();
+      final item = _combatant(visibility: InitiativeVisibility.full)
+        ..cooldownTimers = [2, 1];
+      original.addInitiativeItem(item);
+      original.addInitiativeItem(_combatant(name: 'Goblin', hp: 8));
+      original.setCurrentTurn(1);
+      original.setHp(0, 7);
+      await original.flushPendingPersistence();
+      original.dispose();
+
+      final separateCampaign = InitiativeAppState(campaignId: 'other-campaign');
+      await separateCampaign.initialize();
+      expect(separateCampaign.initiativeItems, isEmpty);
+      separateCampaign.dispose();
+
+      final restored = InitiativeAppState();
+      await restored.initialize();
+
+      expect(restored.initiativeItems, hasLength(2));
+      expect(restored.currentTurnIndex, 1);
+      expect(restored.initiativeItems.first.name, 'Guard');
+      expect(restored.initiativeItems.first.hp, 7);
+      expect(restored.initiativeItems.first.cooldownTimers, [2, 1]);
+      expect(
+        restored.initiativeItems.first.visibility,
+        InitiativeVisibility.full,
+      );
+
+      await restored.endEncounter();
+      await restored.flushPendingPersistence();
+
+      final afterEnd = InitiativeAppState();
+      await afterEnd.initialize();
+      expect(afterEnd.initiativeItems, isEmpty);
+      expect(afterEnd.currentTurnIndex, 0);
+
+      restored.dispose();
+      afterEnd.dispose();
+    });
+
     test('new combatants default to limited visibility', () {
       final item = _combatant();
 

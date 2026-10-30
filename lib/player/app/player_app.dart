@@ -1,13 +1,15 @@
 import 'dart:async';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../theme/app_colors.dart';
+import '../../theme/app_theme.dart';
+import '../player_link.dart';
 import '../models/player_shared_card.dart';
-import '../models/player_initiative.dart';
 import '../state/player_app_state.dart';
+import '../widgets/player_initiative_panel.dart';
+import '../widgets/player_shared_card_tile.dart';
 
 class PlayerApp extends StatefulWidget {
   final String? initializationError;
@@ -26,11 +28,14 @@ class _PlayerAppState extends State<PlayerApp> {
   final _displayNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _cardSearchController = TextEditingController();
   final _preferences = SharedPreferencesAsync();
   String? _formError;
   String? _authMessage;
   bool _isCreatingAccount = false;
   bool _isAuthenticating = false;
+  bool _isResumingSignIn = false;
+  int _mobileSelectedTab = 0;
 
   @override
   void initState() {
@@ -39,29 +44,61 @@ class _PlayerAppState extends State<PlayerApp> {
     _client = widget.initializationError == null
         ? Supabase.instance.client
         : null;
+    _cardSearchController.addListener(_onCardSearchChanged);
     _state = PlayerAppState(_client)..addListener(_onStateChanged);
     _authSubscription = _client?.auth.onAuthStateChange.listen(
       _onAuthStateChanged,
     );
-    unawaited(_restorePendingJoinFields());
     if (widget.initializationError == null) {
-      _state.initialize(_initialJoinCode());
+      unawaited(_initializePlayer());
     }
   }
 
   void _onAuthStateChanged(AuthState state) {
     if (state.event == AuthChangeEvent.signedOut) {
       unawaited(_state.handleSignedOut());
-    } else if (state.event == AuthChangeEvent.signedIn &&
-        _state.campaignId == null) {
-      unawaited(_state.initialize(_joinCodeController.text));
+    } else if (state.event == AuthChangeEvent.signedIn ||
+        state.event == AuthChangeEvent.initialSession) {
       final metadataName = _client?.auth.currentUser?.userMetadata?['name'];
       if (_displayNameController.text.trim().isEmpty &&
           metadataName is String) {
         _displayNameController.text = metadataName;
       }
+      unawaited(_resumeSignedInPlayer());
     }
     if (mounted) setState(() {});
+  }
+
+  Future<void> _initializePlayer() async {
+    await _restorePendingJoinFields();
+    if (!mounted) return;
+    await _resumeSignedInPlayer();
+  }
+
+  Future<void> _resumeSignedInPlayer() async {
+    if (_isResumingSignIn ||
+        _state.campaignId != null ||
+        _client?.auth.currentUser == null) {
+      return;
+    }
+    _isResumingSignIn = true;
+    try {
+      await _restorePendingJoinFields();
+      if (!mounted) return;
+
+      final pendingCode = _joinCodeController.text.trim();
+      final pendingName = _displayNameController.text.trim();
+      if (pendingCode.isNotEmpty && pendingName.isNotEmpty) {
+        await _state.join(pendingCode, pendingName);
+        if (_state.campaignId != null) {
+          await _clearPendingJoinFields();
+        }
+      } else {
+        await _state.initialize(null);
+      }
+    } finally {
+      _isResumingSignIn = false;
+    }
   }
 
   Future<void> _restorePendingJoinFields() async {
@@ -78,12 +115,14 @@ class _PlayerAppState extends State<PlayerApp> {
   }
 
   String? _initialJoinCode() {
-    final fragment = Uri.tryParse(Uri.base.fragment);
-    return fragment?.queryParameters['code'] ??
-        Uri.base.queryParameters['code'];
+    return campaignJoinCodeFromUri(Uri.base);
   }
 
   void _onStateChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onCardSearchChanged() {
     if (mounted) setState(() {});
   }
 
@@ -93,40 +132,29 @@ class _PlayerAppState extends State<PlayerApp> {
       ..removeListener(_onStateChanged)
       ..dispose();
     unawaited(_authSubscription?.cancel());
+    _cardSearchController.removeListener(_onCardSearchChanged);
     _joinCodeController.dispose();
     _displayNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _cardSearchController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF237A70),
-      brightness: Brightness.light,
-    );
     return MaterialApp(
       title: 'DnD Shared Cards',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: colorScheme,
-        scaffoldBackgroundColor: const Color(0xFFF5F7F6),
-      ),
+      theme: AppTheme.light,
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Shared Cue Cards'),
-          backgroundColor: colorScheme.surface,
-        ),
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: _buildContent(),
-            ),
-          ),
-        ),
+        backgroundColor: AppColors.ground,
+        appBar: _state.campaignId == null
+            ? AppBar(
+                title: const Text('Shared Cue Cards'),
+                backgroundColor: AppColors.panel,
+              )
+            : null,
+        body: SizedBox.expand(child: _buildContent()),
       ),
     );
   }
@@ -138,8 +166,17 @@ class _PlayerAppState extends State<PlayerApp> {
     if (_state.isLoading && _state.campaignId == null) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_client?.auth.currentUser == null) return _buildJoinForm();
-    if (_state.campaignId == null) return _buildJoinForm();
+    if (_client?.auth.currentUser == null || _state.campaignId == null) {
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: _buildJoinForm(),
+          ),
+        ),
+      );
+    }
     return _buildCampaign();
   }
 
@@ -210,6 +247,7 @@ class _PlayerAppState extends State<PlayerApp> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _isAuthenticating ? null : _signInWithGoogle,
                     icon: const Icon(Icons.login),
@@ -373,333 +411,253 @@ class _PlayerAppState extends State<PlayerApp> {
     setState(() => _formError = null);
     await _state.join(code, name);
     if (_state.campaignId != null) {
-      await _preferences.remove('player_pending_join_code');
-      await _preferences.remove('player_pending_display_name');
+      await _clearPendingJoinFields();
     }
   }
 
+  Future<void> _clearPendingJoinFields() async {
+    await _preferences.remove('player_pending_join_code');
+    await _preferences.remove('player_pending_display_name');
+  }
+
   Widget _buildCampaign() {
-    final campaignName = _state.campaignName ?? 'Campaign';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        campaignName,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 4),
-                      Text('Playing as ${_state.displayName ?? 'Player'}'),
-                    ],
-                  ),
-                ),
-                Column(
-                  children: [
-                    TextButton(
-                      onPressed: _state.leaveCampaign,
-                      child: const Text('Leave campaign'),
-                    ),
-                    TextButton(
-                      onPressed: _signOut,
-                      child: const Text('Sign out'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (_state.error != null)
-          _errorPanel(_state.error!, retry: _state.retry),
-        Expanded(
-          child:
-              _state.isLoading &&
-                  _state.cards.isEmpty &&
-                  _state.initiativeEncounter == null
-              ? const Center(child: CircularProgressIndicator())
-              : ListView(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  children: [
-                    if (_state.initiativeEncounter?.combatants.isNotEmpty ==
-                        true)
-                      _buildInitiative(_state.initiativeEncounter!),
-                    if (_state.cards.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Center(
-                          child: Text('No cards have been shared yet.'),
-                        ),
-                      )
-                    else
-                      for (final card in _state.cards) _buildCard(card),
-                  ],
-                ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) => constraints.maxWidth < 800
+          ? _buildMobileCampaign()
+          : _buildDesktopCampaign(constraints.maxWidth),
     );
   }
 
-  Widget _buildInitiative(PlayerInitiativeEncounter encounter) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+  Widget _buildDesktopCampaign(double availableWidth) {
+    final sidebarWidth = (availableWidth * 0.3).clamp(300.0, 380.0);
+    return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Initiative', style: Theme.of(context).textTheme.titleLarge),
-            for (final combatant in encounter.combatants)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(
-                  child: Text(combatant.initiative.toString()),
-                ),
-                title: Row(
-                  children: [
-                    Expanded(child: Text(combatant.name)),
-                    if (combatant.isCurrent)
-                      const Chip(
-                        label: Text('Current turn'),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                  ],
-                ),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      Text(
-                        combatant.visibility == 'full' &&
-                                combatant.hp != null &&
-                                combatant.maxHp != null
-                            ? '${combatant.healthStatus} - ${combatant.hp}/${combatant.maxHp} HP'
-                            : combatant.healthStatus,
-                      ),
-                      if (combatant.exhaustion != null)
-                        Text('Exhaustion: ${combatant.exhaustion}'),
-                      if (combatant.concentration != null)
-                        Text(
-                          combatant.concentration!
-                              ? 'Concentration'
-                              : 'Not concentrating',
+            _buildCampaignHeader(compact: false),
+            if (_state.error != null)
+              _errorPanel(_state.error!, retry: _state.retry),
+            Expanded(
+              child:
+                  _state.isLoading &&
+                      _state.cards.isEmpty &&
+                      _state.initiativeEncounter == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: Container(
+                            color: AppColors.ground,
+                            child: _buildCardsSection(
+                              _filteredCards,
+                              compact: false,
+                            ),
+                          ),
                         ),
-                      if (combatant.reactionUsed != null)
-                        Text(
-                          combatant.reactionUsed!
-                              ? 'Reaction used'
-                              : 'Reaction ready',
+                        SizedBox(
+                          width: sidebarWidth,
+                          child: PlayerInitiativePanel(
+                            encounter: _state.initiativeEncounter,
+                            compact: false,
+                          ),
                         ),
-                      if (combatant.capacity != null)
-                        Text('Capacity: ${combatant.capacity}'),
-                      if (combatant.cooldownTimers != null)
-                        Text(
-                          'Charges: ${combatant.cooldownTimers!.join(' / ')}',
-                        ),
-                      if (combatant.cooldown != null)
-                        Text('Cooldown: ${combatant.cooldown} turns'),
-                    ],
-                  ),
-                ),
-              ),
+                      ],
+                    ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCard(PlayerSharedCard card) {
-    final typeColor = _colorFromArgb(card.typeColor, Colors.white);
-    final rarityColor = _colorFromArgb(card.rarityColor, Colors.white);
-    final hasUpdated = _state.hasUnseenUpdate(card);
-
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      clipBehavior: Clip.antiAlias,
-      child: ExpansionTile(
-        onExpansionChanged: (expanded) {
-          if (expanded) _state.markViewed(card);
-        },
-        title: Row(
-          children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: typeColor,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: Colors.black26),
-                ),
-                child: Text(
-                  card.title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            if (hasUpdated) ...[
-              const SizedBox(width: 8),
-              const Chip(
-                label: Text('Updated'),
-                visualDensity: VisualDensity.compact,
-              ),
-            ],
-          ],
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: [
-              if (card.typeName != null)
-                _metadataChip(card.typeName!, typeColor),
-              if (card.rarityName != null)
-                _metadataChip(card.rarityName!, rarityColor),
-              for (final tag in card.tags) _metadataChip(tag, null),
-            ],
-          ),
-        ),
+  Widget _buildMobileCampaign() {
+    return SafeArea(
+      child: Column(
         children: [
-          if (card.schemaVersion > 1)
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: Text(
-                'This card uses a newer format. Some details may not be shown.',
-                style: TextStyle(color: Colors.black54),
+          _buildCampaignHeader(compact: true),
+          if (_state.error != null)
+            _errorPanel(_state.error!, retry: _state.retry),
+          Expanded(
+            child:
+                _state.isLoading &&
+                    _state.cards.isEmpty &&
+                    _state.initiativeEncounter == null
+                ? const Center(child: CircularProgressIndicator())
+                : _mobileSelectedTab == 0
+                ? _buildCardsSection(_filteredCards, compact: true)
+                : PlayerInitiativePanel(
+                    encounter: _state.initiativeEncounter,
+                    compact: true,
+                  ),
+          ),
+          NavigationBar(
+            selectedIndex: _mobileSelectedTab,
+            onDestinationSelected: (index) {
+              setState(() => _mobileSelectedTab = index);
+            },
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.style_outlined),
+                selectedIcon: Icon(Icons.style),
+                label: 'Cards',
               ),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
-            child: LayoutBuilder(
-              builder: (context, constraints) => AspectRatio(
-                aspectRatio: constraints.maxWidth < 500 ? 4 / 3 : 16 / 9,
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Expanded(child: _cardIcon(card.iconBytes)),
-                          Expanded(
-                            flex: 6,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: rarityColor,
-                                border: Border.all(color: Colors.black),
-                              ),
-                              child: LayoutBuilder(
-                                builder: (context, constraints) => Container(
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: typeColor,
-                                    border: Border.all(color: Colors.black),
-                                    borderRadius: BorderRadius.all(
-                                      Radius.elliptical(
-                                        constraints.maxWidth / 2,
-                                        constraints.maxHeight / 2,
-                                      ),
-                                    ),
-                                  ),
-                                  padding: const EdgeInsets.all(8),
-                                  child: Text(
-                                    card.title,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: (constraints.maxHeight * 0.32)
-                                          .clamp(12, 28),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Expanded(child: _cardSection(card.requirements)),
-                        ],
-                      ),
-                    ),
-                    Expanded(flex: 3, child: _cardSection(card.description)),
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Expanded(flex: 7, child: _cardSection(card.notes)),
-                          Expanded(
-                            child: Column(
-                              children: [
-                                Expanded(child: _cardSection(card.box1)),
-                                Expanded(child: _cardSection(card.box2)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              NavigationDestination(
+                icon: Icon(Icons.format_list_numbered),
+                label: 'Initiative',
               ),
-            ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _cardSection(String? value) {
+  List<PlayerSharedCard> get _filteredCards {
+    return _state.cards
+        .where((card) => card.matchesSearch(_cardSearchController.text))
+        .toList();
+  }
+
+  Widget _buildCampaignHeader({required bool compact}) {
     return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.black),
-        color: Colors.white,
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 16 : 20,
+        vertical: compact ? 10 : 12,
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) => Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(8),
-            child: SelectableText(
-              value ?? '',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: (constraints.maxHeight * 0.14).clamp(10, 18),
-              ),
+      decoration: const BoxDecoration(
+        color: AppColors.sidebar,
+        border: Border(bottom: BorderSide(color: AppColors.rule)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _state.campaignName ?? 'Campaign',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontFamily: 'Fraunces',
+                    fontSize: compact ? 18 : 20,
+                  ),
+                ),
+                Text(
+                  'Playing as ${_state.displayName ?? 'Player'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
             ),
           ),
-        ),
+          if (compact)
+            PopupMenuButton<String>(
+              tooltip: 'Campaign options',
+              onSelected: (action) {
+                if (action == 'leave') _state.leaveCampaign();
+                if (action == 'sign_out') _signOut();
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'leave', child: Text('Leave campaign')),
+                PopupMenuItem(value: 'sign_out', child: Text('Sign out')),
+              ],
+            )
+          else ...[
+            TextButton(
+              onPressed: _state.leaveCampaign,
+              child: const Text('Leave campaign'),
+            ),
+            TextButton(onPressed: _signOut, child: const Text('Sign out')),
+          ],
+        ],
       ),
     );
   }
 
-  Widget _cardIcon(Uint8List? bytes) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.black),
-        color: Colors.white,
+  Widget _buildCardsSection(
+    List<PlayerSharedCard> cards, {
+    required bool compact,
+  }) {
+    final count = _cardSearchController.text.trim().isEmpty
+        ? '${_state.cards.length} cards'
+        : '${cards.length} of ${_state.cards.length} cards';
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 16 : 28,
+        vertical: compact ? 16 : 20,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: bytes == null
-          ? const SizedBox.expand()
-          : Image.memory(bytes, fit: BoxFit.cover),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                'Shared cards',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontFamily: 'Fraunces'),
+              ),
+              const SizedBox(width: 8),
+              Text(count, style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildCardSearchField(),
+          const SizedBox(height: 8),
+          Expanded(
+            child: cards.isEmpty
+                ? Center(
+                    child: Text(
+                      _state.cards.isEmpty
+                          ? 'No cards have been shared yet.'
+                          : 'No cards match your search.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    itemCount: cards.length,
+                    itemBuilder: (context, index) => _buildCard(cards[index]),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _metadataChip(String label, Color? color) => Chip(
-    label: Text(label),
-    backgroundColor: color?.withValues(alpha: 0.45),
-    visualDensity: VisualDensity.compact,
-  );
+  Widget _buildCardSearchField() {
+    return TextField(
+      key: const ValueKey('player-card-search'),
+      controller: _cardSearchController,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        hintText: 'Search by title or tag',
+        prefixIcon: const Icon(Icons.search, color: AppColors.muted),
+        suffixIcon: _cardSearchController.text.isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'Clear search',
+                onPressed: _cardSearchController.clear,
+                icon: const Icon(Icons.close),
+              ),
+      ),
+    );
+  }
 
-  Color _colorFromArgb(int? value, Color fallback) {
-    if (value == null) return fallback;
-    return Color(value & 0xFFFFFFFF);
+  Widget _buildCard(PlayerSharedCard card) {
+    return PlayerSharedCardTile(
+      card: card,
+      hasUpdated: _state.hasUnseenUpdate(card),
+      onExpanded: () => _state.markViewed(card),
+    );
   }
 
   Widget _buildError(String message) => Center(child: _errorPanel(message));
