@@ -121,8 +121,13 @@ msix_config:
   publisher_display_name: Get Balled
   identity_name: ballers.suite.dndcuecardapp
   msix_version: 0.0.1.8
-  logo_path: C:\Users\Bill\repos\dnd_cuecard_app\windows\runner\resources\huh.png
+  logo_path: windows\runner\resources\huh.png
   capabilities: nothing
-  certificate_path: C:\Users\Bill\repos\dnd_cuecard_app\certificates\CERTIFICATE.pfx
-  certificate_password: abc123
+  certificate_path: certificates\CERTIFICATE.pfx
+  install_certificate: false
   protocol_activation: dndcuecard
+  app_installer:
+    hours_between_update_checks: 0
+    automatic_background_task: true
+    update_blocks_activation: false
+    show_prompt: true
