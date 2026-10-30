@@ -187,11 +187,11 @@ class CardBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final titleStyle = Theme.of(context)
         .extension<AppTypography>()!
-        .fraunces
+        .bonaNovaSC
         .copyWith(fontSize: 28, color: readableOn(rarityColor));
     final costStyle = Theme.of(context)
         .extension<AppTypography>()!
-        .fraunces
+        .bonaNovaSC
         .copyWith(fontSize: 30, color: readableOn(typeColor));
 
     return Container(

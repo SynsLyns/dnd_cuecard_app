@@ -542,7 +542,7 @@ class _PlayerAppState extends State<PlayerApp> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontFamily: 'Fraunces',
+                    fontFamily: 'BonaNovaSC',
                     fontSize: compact ? 18 : 20,
                   ),
                 ),
@@ -602,7 +602,7 @@ class _PlayerAppState extends State<PlayerApp> {
                 'Shared cards',
                 style: Theme.of(
                   context,
-                ).textTheme.titleMedium?.copyWith(fontFamily: 'Fraunces'),
+                ).textTheme.titleMedium?.copyWith(fontFamily: 'BonaNovaSC'),
               ),
               const SizedBox(width: 8),
               Text(count, style: Theme.of(context).textTheme.bodySmall),

@@ -33,7 +33,7 @@ void main() {
         theme: ThemeData(
           extensions: const [
             AppTypography(
-              fraunces: TextStyle(fontFamily: 'Fraunces', fontSize: 20),
+              bonaNovaSC: TextStyle(fontFamily: 'BonaNovaSC', fontSize: 20),
             ),
           ],
         ),
@@ -85,7 +85,7 @@ void main() {
         theme: ThemeData(
           extensions: const [
             AppTypography(
-              fraunces: TextStyle(fontFamily: 'Fraunces', fontSize: 20),
+              bonaNovaSC: TextStyle(fontFamily: 'BonaNovaSC', fontSize: 20),
             ),
           ],
         ),

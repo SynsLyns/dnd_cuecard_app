@@ -3,19 +3,19 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 class AppTypography extends ThemeExtension<AppTypography> {
-  const AppTypography({required this.fraunces});
+  const AppTypography({required this.bonaNovaSC});
 
-  final TextStyle fraunces;
+  final TextStyle bonaNovaSC;
 
   @override
-  AppTypography copyWith({TextStyle? fraunces}) =>
-      AppTypography(fraunces: fraunces ?? this.fraunces);
+  AppTypography copyWith({TextStyle? bonaNovaSC}) =>
+      AppTypography(bonaNovaSC: bonaNovaSC ?? this.bonaNovaSC);
 
   @override
   AppTypography lerp(ThemeExtension<AppTypography>? other, double t) {
     if (other is! AppTypography) return this;
     return AppTypography(
-      fraunces: TextStyle.lerp(fraunces, other.fraunces, t)!,
+      bonaNovaSC: TextStyle.lerp(bonaNovaSC, other.bonaNovaSC, t)!,
     );
   }
 }
@@ -38,7 +38,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: AppColors.ground,
-      fontFamily: 'DMSans',
+      fontFamily: 'Domine',
       textTheme: const TextTheme(
         bodyLarge: TextStyle(color: AppColors.ink, fontSize: 15),
         bodyMedium: TextStyle(color: AppColors.ink, fontSize: 14),
@@ -61,8 +61,8 @@ class AppTheme {
       ),
       extensions: const [
         AppTypography(
-          fraunces: TextStyle(
-            fontFamily: 'Fraunces',
+          bonaNovaSC: TextStyle(
+            fontFamily: 'BonaNovaSC',
             fontWeight: FontWeight.w600,
           ),
         ),

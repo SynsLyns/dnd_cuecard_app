@@ -26,7 +26,7 @@ class PlayerInitiativePanel extends StatelessWidget {
             Text(
               'Initiative',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontFamily: 'Fraunces',
+                fontFamily: 'BonaNovaSC',
                 fontSize: compact ? 22 : 18,
               ),
             ),

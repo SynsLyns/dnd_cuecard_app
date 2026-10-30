@@ -73,20 +73,18 @@ flutter:
   uses-material-design: true
 
   fonts:
-    - family: DMSans
+    - family: Domine
       fonts:
-        - asset: assets/fonts/DMSans-Variable.ttf
+        - asset: assets/fonts/Domine-Variable.ttf
+          weight: 500
+        - asset: assets/fonts/Domine-Variable.ttf
+          weight: 600
+    - family: BonaNovaSC
+      fonts:
+        - asset: assets/fonts/BonaNovaSC-Regular.ttf
           weight: 400
-        - asset: assets/fonts/DMSans-Variable.ttf
-          weight: 500
-        - asset: assets/fonts/DMSans-Variable.ttf
-          weight: 600
-    - family: Fraunces
-      fonts:
-        - asset: assets/fonts/Fraunces-Variable.ttf
-          weight: 500
-        - asset: assets/fonts/Fraunces-Variable.ttf
-          weight: 600
+        - asset: assets/fonts/BonaNovaSC-Bold.ttf
+          weight: 700
 
   # To add assets to your application, add an assets section, like this:
   # assets:

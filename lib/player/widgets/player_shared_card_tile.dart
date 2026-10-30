@@ -227,7 +227,7 @@ class _PlayerSharedCardTileState extends State<PlayerSharedCardTile> {
   Widget _buildBanner() {
     final titleStyle = Theme.of(context)
         .extension<AppTypography>()!
-        .fraunces
+        .bonaNovaSC
         .copyWith(fontSize: 28, color: readableOn(_rarityColor));
 
     return Container(
@@ -285,7 +285,7 @@ class _PlayerSharedCardTileState extends State<PlayerSharedCardTile> {
                   maxLines: 1,
                   style: Theme.of(context)
                       .extension<AppTypography>()!
-                      .fraunces
+                      .bonaNovaSC
                       .copyWith(fontSize: 30, color: readableOn(_typeColor)),
                 ),
               ),
