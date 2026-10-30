@@ -41,6 +41,13 @@ class PlayerSharedCard {
   int? get typeColor => _intValue(payload['type_color']);
   int? get rarityColor => _intValue(payload['rarity_color']);
 
+  bool matchesSearch(String query) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) return true;
+    return title.toLowerCase().contains(normalizedQuery) ||
+        tags.any((tag) => tag.toLowerCase().contains(normalizedQuery));
+  }
+
   List<String> get tags {
     final value = payload['tags'];
     if (value is! List) return const [];

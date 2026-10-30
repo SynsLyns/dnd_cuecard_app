@@ -71,43 +71,44 @@ class _TagInputFieldState extends State<TagInputField> {
       return const SizedBox.shrink();
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (widget.selectedTags.isNotEmpty) ...[
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: widget.selectedTags
-                .map(
-                  (tag) => TagChip(
-                    tag: tag.name,
-                    onRemove: widget.readOnly ? null : () => _removeTag(tag),
-                  ),
-                )
-                .toList(),
-          ),
-          if (!widget.readOnly) const SizedBox(height: 8),
-        ],
-        if (!widget.readOnly)
-          Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: AppColors.paper,
-              border: Border.all(
-                color: _focusNode.hasFocus
-                    ? AppColors.matcha
-                    : AppColors.border,
-                width: _focusNode.hasFocus ? 1.5 : 1,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final inputWidth = constraints.maxWidth.clamp(0.0, 220.0);
+        return Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            ...widget.selectedTags.map(
+              (tag) => TagChip(
+                tag: tag.name,
+                onRemove: widget.readOnly ? null : () => _removeTag(tag),
               ),
-              borderRadius: BorderRadius.circular(12),
             ),
-            alignment: Alignment.centerLeft,
-            child: _buildAutocomplete(),
-          ),
-      ],
+            if (!widget.readOnly)
+              SizedBox(
+                width: inputWidth,
+                child: Container(
+                  key: const ValueKey('add-tag-input-container'),
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.paper,
+                    border: Border.all(
+                      color: _focusNode.hasFocus
+                          ? AppColors.matcha
+                          : AppColors.border,
+                      width: _focusNode.hasFocus ? 1.5 : 1,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  alignment: Alignment.centerLeft,
+                  child: _buildAutocomplete(),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 

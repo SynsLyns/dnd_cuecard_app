@@ -286,7 +286,10 @@ class _CueCardCreatorViewState extends State<CueCardCreatorView> {
             readOnly: !_isEditMode,
           ),
           if (_isEditMode) ...[
-            const SizedBox(height: 20),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 16),
+              child: Divider(height: 1, thickness: 1, color: AppColors.rule),
+            ),
             _buildActionButtons(),
           ],
         ],

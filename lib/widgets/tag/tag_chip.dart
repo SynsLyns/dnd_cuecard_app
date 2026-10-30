@@ -24,11 +24,14 @@ class _TagChipState extends State<TagChip> {
         onEnter: (_) => setState(() => _isHovered = true),
         onExit: (_) => setState(() => _isHovered = false),
         child: Container(
+          key: ValueKey('tag-chip-${widget.tag}'),
           decoration: BoxDecoration(
             color: AppColors.sage,
             borderRadius: BorderRadius.circular(24),
           ),
-          padding: const EdgeInsets.only(left: 12, right: 8),
+          padding: widget.onRemove == null
+              ? const EdgeInsets.symmetric(horizontal: 12)
+              : const EdgeInsets.only(left: 12, right: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

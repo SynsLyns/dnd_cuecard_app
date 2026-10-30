@@ -1,5 +1,6 @@
 import 'package:dnd_cuecard_app/models/initiative_app_state.dart';
 import 'package:dnd_cuecard_app/models/initiative_item.dart';
+import 'package:dnd_cuecard_app/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -35,6 +36,13 @@ class InitiativeTrackerView extends StatefulWidget {
 }
 
 class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
+  static const _hpTextOutline = [
+    Shadow(color: AppColors.ink, offset: Offset(1, 0)),
+    Shadow(color: AppColors.ink, offset: Offset(-1, 0)),
+    Shadow(color: AppColors.ink, offset: Offset(0, 1)),
+    Shadow(color: AppColors.ink, offset: Offset(0, -1)),
+  ];
+
   final _nameController = TextEditingController();
   final _initiativeController = TextEditingController();
   final _capacityController = TextEditingController();
@@ -135,7 +143,7 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(onPressed: _addItem, child: const Text('Add')),
+          FilledButton(onPressed: _addItem, child: const Text('Add')),
         ],
       ),
     );
@@ -149,6 +157,8 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Initiative Tracker'),
+        backgroundColor: AppColors.panel,
+        foregroundColor: AppColors.ink,
         actions: [
           IconButton(
             tooltip: 'End combat and clear shared encounter',
@@ -165,23 +175,30 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
           if (appState.campaignId == null)
             const ListTile(
               dense: true,
-              leading: Icon(Icons.info_outline),
+              leading: Icon(Icons.info_outline, color: AppColors.matcha),
               title: Text(
                 'Select a campaign to share initiative with players.',
+                style: TextStyle(color: AppColors.inkSoft),
               ),
             )
           else
             ListTile(
               dense: true,
               leading: appState.syncError != null
-                  ? const Icon(Icons.error_outline, color: Colors.red)
+                  ? Icon(
+                      Icons.error_outline,
+                      color: Theme.of(context).colorScheme.error,
+                    )
                   : appState.isSyncing
                   ? const SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.cloud_done_outlined),
+                  : const Icon(
+                      Icons.cloud_done_outlined,
+                      color: AppColors.matcha,
+                    ),
               title: Text(
                 appState.syncError ??
                     (appState.isSyncing
@@ -206,16 +223,16 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                       vertical: 8,
                     ),
                     color: isCurrentTurn
-                        ? Theme.of(context).colorScheme.surfaceContainerLow
-                        : Theme.of(context).colorScheme.surfaceContainerLowest,
+                        ? AppColors.sage.withValues(alpha: 0.45)
+                        : AppColors.paper,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                       side: isCurrentTurn
-                          ? BorderSide(
-                              color: Theme.of(context).colorScheme.primary,
-                              width: 2,
-                            )
-                          : BorderSide(color: Colors.transparent, width: 0),
+                          ? BorderSide(color: AppColors.matcha, width: 2)
+                          : const BorderSide(
+                              color: Colors.transparent,
+                              width: 0,
+                            ),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(12),
@@ -230,11 +247,9 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                 height: 48,
                                 decoration: BoxDecoration(
                                   color: isCurrentTurn
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(
-                                          context,
-                                        ).colorScheme.secondaryContainer,
-                                  borderRadius: BorderRadius.circular(12),
+                                      ? AppColors.matcha
+                                      : AppColors.sage,
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: Center(
                                   child: Text(
@@ -244,12 +259,8 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                         .headlineSmall
                                         ?.copyWith(
                                           color: isCurrentTurn
-                                              ? Theme.of(
-                                                  context,
-                                                ).colorScheme.onPrimary
-                                              : Theme.of(context)
-                                                    .colorScheme
-                                                    .onSecondaryContainer,
+                                              ? AppColors.ground
+                                              : AppColors.matcha,
                                           fontWeight: FontWeight.bold,
                                         ),
                                   ),
@@ -270,12 +281,8 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                 ? FontWeight.bold
                                                 : FontWeight.w600,
                                             color: isCurrentTurn
-                                                ? Theme.of(context)
-                                                      .colorScheme
-                                                      .onPrimaryContainer
-                                                : Theme.of(
-                                                    context,
-                                                  ).colorScheme.onSurface,
+                                                ? AppColors.matcha
+                                                : AppColors.ink,
                                           ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -292,13 +299,9 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                       ? item.hp / item.maxHp
                                                       : 0,
                                                   minHeight: 18,
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .primaryContainer,
+                                                  color: AppColors.matcha,
                                                   backgroundColor:
-                                                      Theme.of(context)
-                                                          .colorScheme
-                                                          .surfaceContainerHigh,
+                                                      AppColors.sage,
                                                 ),
                                               ),
                                               SizedBox(
@@ -324,6 +327,13 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                               border:
                                                                   InputBorder
                                                                       .none,
+                                                              enabledBorder:
+                                                                  InputBorder
+                                                                      .none,
+                                                              focusedBorder:
+                                                                  InputBorder
+                                                                      .none,
+                                                              filled: false,
                                                               isDense: true,
                                                               contentPadding:
                                                                   EdgeInsets.symmetric(
@@ -339,9 +349,10 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                               fontWeight:
                                                                   FontWeight
                                                                       .bold,
-                                                              color: Theme.of(context)
-                                                                  .colorScheme
-                                                                  .onPrimaryContainer,
+                                                              color: AppColors
+                                                                  .ground,
+                                                              shadows:
+                                                                  _hpTextOutline,
                                                             ),
                                                         keyboardType:
                                                             const TextInputType.numberWithOptions(
@@ -378,11 +389,12 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                       child: Text(
                                                         '/',
                                                         style: TextStyle(
-                                                          color: Theme.of(context)
-                                                              .colorScheme
-                                                              .onPrimaryContainer,
+                                                          color:
+                                                              AppColors.ground,
                                                           fontWeight:
                                                               FontWeight.bold,
+                                                          shadows:
+                                                              _hpTextOutline,
                                                         ),
                                                       ),
                                                     ),
@@ -400,6 +412,13 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                               border:
                                                                   InputBorder
                                                                       .none,
+                                                              enabledBorder:
+                                                                  InputBorder
+                                                                      .none,
+                                                              focusedBorder:
+                                                                  InputBorder
+                                                                      .none,
+                                                              filled: false,
                                                               isDense: true,
                                                               contentPadding:
                                                                   EdgeInsets.symmetric(
@@ -415,9 +434,10 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                               fontWeight:
                                                                   FontWeight
                                                                       .bold,
-                                                              color: Theme.of(context)
-                                                                  .colorScheme
-                                                                  .onPrimaryContainer,
+                                                              color: AppColors
+                                                                  .ground,
+                                                              shadows:
+                                                                  _hpTextOutline,
                                                             ),
                                                         keyboardType:
                                                             const TextInputType.numberWithOptions(
@@ -466,7 +486,7 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                   InitiativeVisibility.limited =>
                                     Icons.visibility_outlined,
                                   InitiativeVisibility.full => Icons.visibility,
-                                }),
+                                }, color: AppColors.matcha),
                                 onPressed: () => _showVisibilityMenu(
                                   context,
                                   appState,
@@ -478,11 +498,7 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                 icon: const Icon(Icons.delete),
                                 onPressed: () =>
                                     appState.removeInitiativeItem(index),
-                                color: isCurrentTurn
-                                    ? Theme.of(
-                                        context,
-                                      ).colorScheme.onPrimaryContainer
-                                    : Theme.of(context).colorScheme.error,
+                                color: Theme.of(context).colorScheme.error,
                               ),
                             ],
                           ),
@@ -507,14 +523,10 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.surface,
+                                      color: AppColors.panel,
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.outline,
+                                        color: AppColors.border,
                                       ),
                                     ),
                                     child: Row(
@@ -539,6 +551,7 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                           style: const TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
+                                            color: AppColors.ink,
                                           ),
                                         ),
                                         const SizedBox(width: 4),
@@ -585,15 +598,13 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                 width: 26,
                                                 height: 26,
                                                 decoration: BoxDecoration(
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .surfaceContainerHighest,
+                                                  color: AppColors.sage,
                                                   shape: BoxShape.circle,
                                                 ),
                                                 child: const Icon(
                                                   Icons.circle_outlined,
                                                   size: 16,
-                                                  color: Colors.grey,
+                                                  color: AppColors.muted,
                                                 ),
                                               ),
                                             )
@@ -609,9 +620,7 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                 width: 26,
                                                 height: 26,
                                                 decoration: BoxDecoration(
-                                                  color: Theme.of(
-                                                    context,
-                                                  ).colorScheme.primary,
+                                                  color: AppColors.matcha,
                                                   shape: BoxShape.circle,
                                                 ),
                                                 child: Center(
@@ -619,9 +628,7 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                     timer.toString(),
                                                     style: TextStyle(
                                                       fontSize: 12,
-                                                      color: Theme.of(
-                                                        context,
-                                                      ).colorScheme.onPrimary,
+                                                      color: AppColors.ground,
                                                       fontWeight:
                                                           FontWeight.bold,
                                                     ),
@@ -641,6 +648,9 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                           appState.toggleToggleState(index),
                                       borderRadius: BorderRadius.circular(12),
                                       child: Container(
+                                        key: ValueKey(
+                                          'toggle-indicator-${item.name}',
+                                        ),
                                         width: 26,
                                         height: 26,
                                         decoration: BoxDecoration(
@@ -676,6 +686,9 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                               12,
                                             ),
                                             child: Container(
+                                              key: ValueKey(
+                                                'cd1-indicator-${item.name}',
+                                              ),
                                               width: 26,
                                               height: 26,
                                               decoration: BoxDecoration(
@@ -698,6 +711,9 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                               20,
                                             ),
                                             child: Container(
+                                              key: ValueKey(
+                                                'cd1-indicator-${item.name}',
+                                              ),
                                               width: 26,
                                               height: 26,
                                               decoration: BoxDecoration(
@@ -731,9 +747,10 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
           ),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: ElevatedButton(
+            child: FilledButton.icon(
               onPressed: appState.nextTurn,
-              child: const Text('Next Turn'),
+              icon: const Icon(Icons.skip_next),
+              label: const Text('Next Turn'),
             ),
           ),
         ],

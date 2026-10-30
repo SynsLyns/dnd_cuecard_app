@@ -28,81 +28,110 @@ class CardOptions extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
 
-    final cardType = CategorizableDropdownMenu<CardType>(
-      label: 'Card Type',
-      controller: _controllers.cardTypeController,
-      values: appState.cardTypes,
-      onValueChanged: _onCardTypeChanged,
-      getColor: (item) => item.color,
-      readOnly: readOnly,
-    );
-    final rarity = CategorizableDropdownMenu<Rarity>(
-      label: 'Rarity',
-      controller: _controllers.rarityController,
-      values: appState.rarities,
-      onValueChanged: _onRarityChanged,
-      getColor: (item) => item.color,
-      readOnly: readOnly,
-    );
-    final tags = TagInputField(
-      selectedTags: _controllers.tags,
-      suggestions: appState.tags,
-      readOnly: readOnly,
-    );
-
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < 620) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _field('CARD TYPE', cardType),
-              const SizedBox(height: 12),
-              _field('RARITY', rarity),
-              const SizedBox(height: 12),
-              _field('TAGS', tags, height: null),
-            ],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        final labelWidth = constraints.maxWidth < 560 ? 96.0 : 180.0;
+        final cardType = CategorizableDropdownMenu<CardType>(
+          label: 'Card Type',
+          controller: _controllers.cardTypeController,
+          values: appState.cardTypes,
+          onValueChanged: _onCardTypeChanged,
+          getColor: (item) => item.color,
+          readOnly: readOnly,
+        );
+        final rarity = CategorizableDropdownMenu<Rarity>(
+          label: 'Rarity',
+          controller: _controllers.rarityController,
+          values: appState.rarities,
+          onValueChanged: _onRarityChanged,
+          getColor: (item) => item.color,
+          readOnly: readOnly,
+        );
+        final tags = TagInputField(
+          selectedTags: _controllers.tags,
+          suggestions: appState.tags,
+          readOnly: readOnly,
+        );
+
+        return Column(
           children: [
-            SizedBox(
-              width: 190,
-              child: Column(
-                children: [
-                  _field('CARD TYPE', cardType),
-                  const SizedBox(height: 12),
-                  _field('RARITY', rarity),
-                ],
-              ),
+            _settingRow(
+              'TYPE',
+              cardType,
+              labelWidth: labelWidth,
+              constrainValue: true,
             ),
-            const SizedBox(width: 16),
-            Expanded(child: _field('TAGS', tags, height: null)),
+            _rowDivider(),
+            _settingRow(
+              'RARITY',
+              rarity,
+              labelWidth: labelWidth,
+              constrainValue: true,
+            ),
+            _rowDivider(),
+            _settingRow(
+              'TAGS',
+              tags,
+              labelWidth: labelWidth,
+              bottomPadding: readOnly ? 0 : 12,
+              centerValue: readOnly,
+              key: const ValueKey('card-options-tags-row'),
+            ),
           ],
         );
       },
     );
   }
 
-  Widget _field(String label, Widget child, {double? height = 44}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 6),
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.muted,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.48,
+  Widget _settingRow(
+    String label,
+    Widget value, {
+    required double labelWidth,
+    bool constrainValue = false,
+    double bottomPadding = 12,
+    bool centerValue = false,
+    Key? key,
+  }) {
+    return Padding(
+      key: key,
+      padding: EdgeInsets.only(top: 12, bottom: bottomPadding),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: labelWidth,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.muted,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.48,
+              ),
             ),
           ),
-        ),
-        if (height == null) child else SizedBox(height: height, child: child),
-      ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: constrainValue
+                ? Align(
+                    alignment: Alignment.centerLeft,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 260),
+                      child: SizedBox(height: 44, child: value),
+                    ),
+                  )
+                : ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 44),
+                    child: centerValue
+                        ? Align(alignment: Alignment.centerLeft, child: value)
+                        : value,
+                  ),
+          ),
+        ],
+      ),
     );
   }
+
+  Widget _rowDivider() =>
+      const Divider(height: 1, thickness: 1, color: AppColors.rule);
 }
