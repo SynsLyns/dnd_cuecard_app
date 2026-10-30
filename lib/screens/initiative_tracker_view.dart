@@ -36,13 +36,6 @@ class InitiativeTrackerView extends StatefulWidget {
 }
 
 class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
-  static const _hpTextOutline = [
-    Shadow(color: AppColors.ink, offset: Offset(1, 0)),
-    Shadow(color: AppColors.ink, offset: Offset(-1, 0)),
-    Shadow(color: AppColors.ink, offset: Offset(0, 1)),
-    Shadow(color: AppColors.ink, offset: Offset(0, -1)),
-  ];
-
   final _nameController = TextEditingController();
   final _initiativeController = TextEditingController();
   final _capacityController = TextEditingController();
@@ -99,6 +92,7 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Add Initiative Item'),
+        scrollable: true,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -106,31 +100,37 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Name'),
             ),
+            const SizedBox(height: 8),
             TextField(
               controller: _initiativeController,
               decoration: const InputDecoration(labelText: 'Initiative'),
               keyboardType: TextInputType.number,
             ),
+            const SizedBox(height: 8),
             TextField(
               controller: _capacityController,
               decoration: const InputDecoration(labelText: 'Capacity'),
               keyboardType: TextInputType.number,
             ),
+            const SizedBox(height: 8),
             TextField(
               controller: _cooldownController,
               decoration: const InputDecoration(labelText: 'Cooldown'),
               keyboardType: TextInputType.number,
             ),
+            const SizedBox(height: 8),
             TextField(
               controller: _hpController,
               decoration: const InputDecoration(labelText: 'Current HP'),
               keyboardType: TextInputType.number,
             ),
+            const SizedBox(height: 8),
             TextField(
               controller: _maxHpController,
               decoration: const InputDecoration(labelText: 'Max HP'),
               keyboardType: TextInputType.number,
             ),
+            const SizedBox(height: 8),
             TextField(
               controller: _exhaustionController,
               decoration: const InputDecoration(labelText: 'Exhaustion (0-6)'),
@@ -163,16 +163,36 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
           IconButton(
             tooltip: 'End combat and clear shared encounter',
             icon: const Icon(Icons.stop_circle_outlined),
-            onPressed: appState.campaignId == null && items.isEmpty
+            onPressed:
+                appState.isLoadingSavedState ||
+                    (appState.campaignId == null && items.isEmpty)
                 ? null
                 : () => _confirmEndCombat(context, appState),
           ),
-          IconButton(icon: const Icon(Icons.add), onPressed: _showAddDialog),
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: appState.isLoadingSavedState ? null : _showAddDialog,
+          ),
         ],
       ),
       body: Column(
         children: [
-          if (appState.campaignId == null)
+          if (appState.isLoadingSavedState)
+            const LinearProgressIndicator()
+          else if (appState.persistenceError != null)
+            ListTile(
+              dense: true,
+              leading: Icon(
+                Icons.error_outline,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(
+                appState.persistenceError!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            )
+          else if (appState.campaignId == null)
             const ListTile(
               dense: true,
               leading: Icon(Icons.info_outline, color: AppColors.matcha),
@@ -299,7 +319,7 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                       ? item.hp / item.maxHp
                                                       : 0,
                                                   minHeight: 18,
-                                                  color: AppColors.matcha,
+                                                  color: AppColors.rule,
                                                   backgroundColor:
                                                       AppColors.sage,
                                                 ),
@@ -350,9 +370,7 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                                   FontWeight
                                                                       .bold,
                                                               color: AppColors
-                                                                  .ground,
-                                                              shadows:
-                                                                  _hpTextOutline,
+                                                                  .matcha,
                                                             ),
                                                         keyboardType:
                                                             const TextInputType.numberWithOptions(
@@ -390,11 +408,9 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                         '/',
                                                         style: TextStyle(
                                                           color:
-                                                              AppColors.ground,
+                                                              AppColors.matcha,
                                                           fontWeight:
                                                               FontWeight.bold,
-                                                          shadows:
-                                                              _hpTextOutline,
                                                         ),
                                                       ),
                                                     ),
@@ -435,9 +451,7 @@ class _InitiativeTrackerViewState extends State<InitiativeTrackerView> {
                                                                   FontWeight
                                                                       .bold,
                                                               color: AppColors
-                                                                  .ground,
-                                                              shadows:
-                                                                  _hpTextOutline,
+                                                                  .matcha,
                                                             ),
                                                         keyboardType:
                                                             const TextInputType.numberWithOptions(

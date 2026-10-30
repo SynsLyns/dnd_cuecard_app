@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:dnd_cuecard_app/app_state.dart';
 import 'package:dnd_cuecard_app/models/initiative_app_state.dart';
@@ -52,7 +53,11 @@ class InitiativeTrackerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => InitiativeAppState(campaignId: campaignId),
+      create: (context) {
+        final state = InitiativeAppState(campaignId: campaignId);
+        unawaited(state.initialize());
+        return state;
+      },
       child: MaterialApp(
         title: 'Initiative Tracker',
         theme: AppTheme.light,

@@ -64,8 +64,8 @@ Limited, or Full. Hidden combatants are omitted entirely. Limited shares name,
 initiative, current-turn marker, and a health label. Full additionally shares
 exact HP, exhaustion, concentration, reaction state, capacity, and cooldowns.
 The shared encounter stays available to players until the DM uses **End
-combat**. The tracker's full DM state remains in memory only and is not restored
-after restarting the desktop app.
+combat**. The tracker's full DM state is saved locally per campaign, restored
+when the tracker is reopened, and cleared when **End combat** succeeds.
 
 ## Run the player web app
 

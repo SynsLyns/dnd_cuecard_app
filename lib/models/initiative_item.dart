@@ -27,6 +27,71 @@ class InitiativeItem {
   }) : cooldownTimers = List.filled(capacity, 0),
        assert(hp <= maxHp, 'hp cannot exceed maxHp');
 
+  factory InitiativeItem.fromJson(Map<String, dynamic> json) {
+    final name = json['name'];
+    final initiative = json['initiative'];
+    final capacity = json['capacity'];
+    final cooldown = json['cooldown'];
+    final exhaustion = json['exhaustion'];
+    final hp = json['hp'];
+    final maxHp = json['max_hp'];
+    final cooldownTimers = json['cooldown_timers'];
+    final toggleState = json['toggle_state'];
+    final cd1State = json['cd1_state'];
+    final visibility = json['visibility'];
+
+    if (name is! String ||
+        initiative is! int ||
+        capacity is! int ||
+        capacity < 0 ||
+        cooldown is! int ||
+        exhaustion is! int ||
+        hp is! int ||
+        maxHp is! int ||
+        cooldownTimers is! List ||
+        cooldownTimers.length != capacity ||
+        cooldownTimers.any((timer) => timer is! int) ||
+        toggleState is! bool ||
+        cd1State is! int ||
+        visibility is! String) {
+      throw const FormatException('Invalid saved initiative item.');
+    }
+
+    final InitiativeVisibility parsedVisibility;
+    try {
+      parsedVisibility = InitiativeVisibility.values.byName(visibility);
+    } on ArgumentError {
+      throw const FormatException('Invalid saved initiative visibility.');
+    }
+
+    return InitiativeItem(
+      name: name,
+      initiative: initiative,
+      capacity: capacity,
+      cooldown: cooldown,
+      exhaustion: exhaustion,
+      hp: hp,
+      maxHp: maxHp,
+      toggleState: toggleState,
+      cd1State: cd1State,
+      visibility: parsedVisibility,
+    )..cooldownTimers = cooldownTimers.cast<int>();
+  }
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'initiative': initiative,
+    'capacity': capacity,
+    'cooldown': cooldown,
+    'exhaustion': exhaustion,
+    'hp': hp,
+    'max_hp': maxHp,
+    'cooldown_timers': cooldownTimers,
+    'toggle_state': toggleState,
+    'cd1_state': cd1State,
+    'visibility': visibility.name,
+  };
+
   String get healthStatus {
     if (hp <= 0) return 'Down';
     if (maxHp <= 0 || hp * 4 <= maxHp) return 'Near Death';

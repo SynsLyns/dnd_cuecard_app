@@ -60,13 +60,13 @@ void main() {
     expect(maxHp.decoration?.filled, isFalse);
     expect(currentHp.decoration?.border, InputBorder.none);
     expect(maxHp.decoration?.border, InputBorder.none);
-    expect(currentHp.style?.color, AppColors.ground);
-    expect(maxHp.style?.color, AppColors.ground);
-    expect(currentHp.style?.shadows, hasLength(4));
-    expect(maxHp.style?.shadows, hasLength(4));
+    expect(currentHp.style?.color, AppColors.matcha);
+    expect(maxHp.style?.color, AppColors.matcha);
+    expect(currentHp.style?.shadows, isNull);
+    expect(maxHp.style?.shadows, isNull);
     final divider = tester.widget<Text>(find.text('/'));
-    expect(divider.style?.color, AppColors.ground);
-    expect(divider.style?.shadows, hasLength(4));
+    expect(divider.style?.color, AppColors.matcha);
+    expect(divider.style?.shadows, isNull);
 
     final toggleCircle = tester.widget<Container>(
       find.byKey(const ValueKey('toggle-indicator-Guard')),
@@ -80,8 +80,29 @@ void main() {
     final healthBar = tester.widget<LinearProgressIndicator>(
       find.byType(LinearProgressIndicator),
     );
-    expect(healthBar.color, AppColors.matcha);
+    expect(healthBar.color, AppColors.rule);
     expect(healthBar.backgroundColor, AppColors.sage);
     expect(find.text('Next Turn'), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.byIcon(Icons.add),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final dialogFields = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(TextField),
+    );
+    expect(dialogFields, findsNWidgets(7));
+    final firstFieldRect = tester.getRect(dialogFields.at(0));
+    final secondFieldRect = tester.getRect(dialogFields.at(1));
+    expect(
+      secondFieldRect.top - firstFieldRect.bottom,
+      greaterThanOrEqualTo(8),
+    );
+    expect(tester.takeException(), isNull);
   });
 }

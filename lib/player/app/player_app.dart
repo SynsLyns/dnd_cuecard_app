@@ -5,10 +5,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
-import '../models/player_shared_card.dart';
-import '../models/player_initiative.dart';
 import '../player_link.dart';
+import '../models/player_shared_card.dart';
 import '../state/player_app_state.dart';
+import '../widgets/player_initiative_panel.dart';
 import '../widgets/player_shared_card_tile.dart';
 
 class PlayerApp extends StatefulWidget {
@@ -154,7 +154,7 @@ class _PlayerAppState extends State<PlayerApp> {
                 backgroundColor: AppColors.panel,
               )
             : null,
-        body: _buildContent(),
+        body: SizedBox.expand(child: _buildContent()),
       ),
     );
   }
@@ -247,6 +247,7 @@ class _PlayerAppState extends State<PlayerApp> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _isAuthenticating ? null : _signInWithGoogle,
                     icon: const Icon(Icons.login),
@@ -430,51 +431,43 @@ class _PlayerAppState extends State<PlayerApp> {
   Widget _buildDesktopCampaign(double availableWidth) {
     final sidebarWidth = (availableWidth * 0.3).clamp(300.0, 380.0);
     return SafeArea(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1440),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildCampaignHeader(compact: false),
-                if (_state.error != null)
-                  _errorPanel(_state.error!, retry: _state.retry),
-                Expanded(
-                  child:
-                      _state.isLoading &&
-                          _state.cards.isEmpty &&
-                          _state.initiativeEncounter == null
-                      ? const Center(child: CircularProgressIndicator())
-                      : Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: Container(
-                                color: AppColors.ground,
-                                child: _buildCardsSection(
-                                  _filteredCards,
-                                  compact: false,
-                                ),
-                              ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildCampaignHeader(compact: false),
+            if (_state.error != null)
+              _errorPanel(_state.error!, retry: _state.retry),
+            Expanded(
+              child:
+                  _state.isLoading &&
+                      _state.cards.isEmpty &&
+                      _state.initiativeEncounter == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: Container(
+                            color: AppColors.ground,
+                            child: _buildCardsSection(
+                              _filteredCards,
+                              compact: false,
                             ),
-                            SizedBox(
-                              width: sidebarWidth,
-                              child: Container(
-                                color: AppColors.sidebar,
-                                child: _buildInitiativeSection(
-                                  _state.initiativeEncounter,
-                                  compact: false,
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                ),
-              ],
+                        SizedBox(
+                          width: sidebarWidth,
+                          child: PlayerInitiativePanel(
+                            encounter: _state.initiativeEncounter,
+                            compact: false,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -495,8 +488,8 @@ class _PlayerAppState extends State<PlayerApp> {
                 ? const Center(child: CircularProgressIndicator())
                 : _mobileSelectedTab == 0
                 ? _buildCardsSection(_filteredCards, compact: true)
-                : _buildInitiativeSection(
-                    _state.initiativeEncounter,
+                : PlayerInitiativePanel(
+                    encounter: _state.initiativeEncounter,
                     compact: true,
                   ),
           ),
@@ -655,177 +648,6 @@ class _PlayerAppState extends State<PlayerApp> {
                 onPressed: _cardSearchController.clear,
                 icon: const Icon(Icons.close),
               ),
-      ),
-    );
-  }
-
-  Widget _buildInitiativeSection(
-    PlayerInitiativeEncounter? encounter, {
-    required bool compact,
-  }) {
-    final hasCombatants = encounter?.combatants.isNotEmpty ?? false;
-    return Container(
-      color: compact ? AppColors.ground : AppColors.sidebar,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.all(compact ? 16 : 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (compact)
-              Text(
-                'Initiative',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontFamily: 'Fraunces'),
-              ),
-            if (!compact && !hasCombatants)
-              Text(
-                'Initiative',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontFamily: 'Fraunces'),
-              ),
-            if (compact) const SizedBox(height: 12),
-            if (hasCombatants)
-              _buildInitiative(encounter!, compact: compact)
-            else
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.panel,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.rule),
-                ),
-                child: Text(
-                  'No active initiative encounter.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInitiative(
-    PlayerInitiativeEncounter encounter, {
-    required bool compact,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.panel,
-        border: Border.all(color: AppColors.rule),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (!compact) ...[
-            Text(
-              'Initiative',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontFamily: 'Fraunces'),
-            ),
-            const SizedBox(height: 8),
-          ],
-          for (final combatant in encounter.combatants)
-            _buildCombatant(combatant),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCombatant(PlayerInitiativeCombatant combatant) {
-    final details = <String>[
-      combatant.visibility == 'full' &&
-              combatant.hp != null &&
-              combatant.maxHp != null
-          ? '${combatant.healthStatus} · ${combatant.hp}/${combatant.maxHp} HP'
-          : combatant.healthStatus,
-      if (combatant.exhaustion != null) 'Exhaustion ${combatant.exhaustion}',
-      if (combatant.concentration != null)
-        combatant.concentration! ? 'Concentrating' : 'Not concentrating',
-      if (combatant.reactionUsed != null)
-        combatant.reactionUsed! ? 'Reaction used' : 'Reaction ready',
-      if (combatant.capacity != null) 'Capacity ${combatant.capacity}',
-      if (combatant.cooldownTimers != null)
-        'Charges ${combatant.cooldownTimers!.join('/')}',
-      if (combatant.cooldown != null) 'Cooldown ${combatant.cooldown} turns',
-    ];
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: combatant.isCurrent ? AppColors.paper : Colors.transparent,
-        border: Border.all(
-          color: combatant.isCurrent ? AppColors.matcha : Colors.transparent,
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: combatant.isCurrent
-                ? AppColors.matcha
-                : AppColors.sage,
-            foregroundColor: combatant.isCurrent
-                ? AppColors.ground
-                : AppColors.matcha,
-            child: Text(
-              combatant.initiative.toString(),
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 2,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      combatant.name,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    if (combatant.isCurrent)
-                      _initiativeChip('Current turn', highlighted: true),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 4,
-                  runSpacing: 4,
-                  children: details.map(_initiativeChip).toList(),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _initiativeChip(String label, {bool highlighted = false}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: highlighted ? AppColors.matcha : AppColors.sage,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: highlighted ? AppColors.ground : AppColors.matcha,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
       ),
     );
   }
