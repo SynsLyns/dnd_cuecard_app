@@ -188,21 +188,21 @@ class CardBanner extends StatelessWidget {
     final titleStyle = Theme.of(context)
         .extension<AppTypography>()!
         .bonaNovaSC
-        .copyWith(fontSize: 28, color: readableOn(rarityColor));
+        .copyWith(fontSize: 28, color: readableOn(typeColor));
     final costStyle = Theme.of(context)
         .extension<AppTypography>()!
         .bonaNovaSC
-        .copyWith(fontSize: 30, color: readableOn(typeColor));
+        .copyWith(fontSize: 30, color: readableOn(rarityColor));
 
     return Container(
       height: 88,
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      color: typeColor,
+      color: rarityColor,
       child: Row(
         children: [
           _CardImage(
             image: image,
-            typeColor: typeColor,
+            rarityColor: rarityColor,
             readOnly: readOnly,
             onAddImage: onAddImage,
           ),
@@ -210,8 +210,8 @@ class CardBanner extends StatelessWidget {
           Expanded(
             child: OvalTitle(
               controller: titleController,
-              backgroundColor: rarityColor,
-              textColor: readableOn(rarityColor),
+              backgroundColor: typeColor,
+              textColor: readableOn(typeColor),
               readOnly: readOnly,
               style: titleStyle,
             ),
@@ -255,19 +255,19 @@ class CardBanner extends StatelessWidget {
 class _CardImage extends StatelessWidget {
   const _CardImage({
     required this.image,
-    required this.typeColor,
+    required this.rarityColor,
     required this.readOnly,
     required this.onAddImage,
   });
 
   final XFile? image;
-  final Color typeColor;
+  final Color rarityColor;
   final bool readOnly;
   final VoidCallback onAddImage;
 
   @override
   Widget build(BuildContext context) {
-    final ringColor = readableOn(typeColor);
+    final ringColor = readableOn(rarityColor);
     return Container(
       width: 52,
       height: 52,
