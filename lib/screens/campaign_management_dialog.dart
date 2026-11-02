@@ -164,15 +164,16 @@ class _CampaignManagementDialogState extends State<CampaignManagementDialog> {
     setState(() => _isLoading = true);
     _setMessage();
     try {
-      final launched = await _supabaseService.signInWithGoogle();
-      if (!launched) {
-        throw CloudSharingException(
-          'The Google sign-in page could not be opened.',
+      await _supabaseService.signInWithGoogle();
+      if (mounted) _setMessage(info: 'Google sign-in completed.');
+    } catch (e) {
+      if (mounted) {
+        _setMessage(
+          error: e is CloudSharingException
+              ? e.message
+              : CloudSharingException.userMessage(e),
         );
       }
-      _setMessage(info: 'Complete Google sign-in in your browser.');
-    } catch (e) {
-      _setMessage(error: CloudSharingException.userMessage(e));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

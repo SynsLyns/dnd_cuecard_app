@@ -13,6 +13,7 @@ import 'screens/cue_card_library_view.dart';
 import 'screens/initiative_tracker_view.dart';
 import 'config/supabase_config.dart';
 import 'logic/supabase_service.dart';
+import 'logic/update_checker.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 
@@ -94,9 +95,57 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  static const _updateCheckInterval = Duration(hours: 4);
+
   bool _isLibraryVisible = true;
   final GlobalKey<ScaffoldState> _mobileScaffoldKey =
       GlobalKey<ScaffoldState>();
+  final UpdateChecker _updateChecker = UpdateChecker();
+  final Set<String> _shownUpdateVersions = {};
+  Timer? _updateCheckTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_checkForUpdates());
+    });
+    _updateCheckTimer = Timer.periodic(
+      _updateCheckInterval,
+      (_) => unawaited(_checkForUpdates()),
+    );
+  }
+
+  @override
+  void dispose() {
+    _updateCheckTimer?.cancel();
+    _updateChecker.dispose();
+    super.dispose();
+  }
+
+  Future<void> _checkForUpdates() async {
+    final availableVersion = await _updateChecker.checkForUpdate();
+    if (!mounted ||
+        availableVersion == null ||
+        !_shownUpdateVersions.add(availableVersion)) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        content: const Text(
+          'A new version is available. Close and reopen the app to update.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

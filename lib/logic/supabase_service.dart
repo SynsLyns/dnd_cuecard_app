@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
@@ -10,6 +12,9 @@ import '../models/cue_card.dart';
 import '../models/shared_card_access.dart';
 import 'cue_card_database.dart';
 import 'join_code_generator.dart';
+
+const _googleAuthLoopbackPorts = [3737, 3738, 3739, 3740, 3741];
+const _googleAuthTimeout = Duration(minutes: 3);
 
 class CloudSharingException implements Exception {
   final String message;
@@ -69,7 +74,13 @@ class SupabaseService {
     }
 
     try {
-      await Supabase.initialize(url: url, publishableKey: anonKey);
+      await Supabase.initialize(
+        url: url,
+        publishableKey: anonKey,
+        authOptions: const FlutterAuthClientOptions(
+          authFlowType: AuthFlowType.pkce,
+        ),
+      );
       return true;
     } catch (e) {
       // In tests or offline, don't crash the desktop app
@@ -147,13 +158,81 @@ class SupabaseService {
   Future<bool> signInWithGoogle() async {
     final cl = _requireClient();
     try {
-      return await cl.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: kIsWeb ? null : 'dndcuecard://login-callback',
-      );
+      if (kIsWeb) {
+        return await cl.auth.signInWithOAuth(OAuthProvider.google);
+      }
+
+      final server = await _bindGoogleAuthServer();
+      try {
+        final launched = await cl.auth.signInWithOAuth(
+          OAuthProvider.google,
+          redirectTo: 'http://127.0.0.1:${server.port}',
+          authScreenLaunchMode: LaunchMode.externalApplication,
+        );
+        if (!launched) {
+          throw CloudSharingException(
+            'The Google sign-in page could not be opened.',
+          );
+        }
+
+        final request = await server.first.timeout(_googleAuthTimeout);
+        final query = request.uri.queryParameters;
+        final code = query['code'];
+        final errorDescription = query['error_description'];
+        final authError = errorDescription ?? query['error'];
+        final pageMessage = authError != null
+            ? 'Sign-in failed: ${htmlEscape.convert(authError)}'
+            : code != null
+            ? 'Signed in. You can close this tab.'
+            : 'Sign-in could not be completed.';
+
+        request.response
+          ..statusCode = HttpStatus.ok
+          ..headers.contentType = ContentType.html
+          ..write(
+            '<!doctype html><html><body><p>$pageMessage</p></body></html>',
+          );
+        await request.response.close();
+
+        if (authError != null) {
+          throw AuthException(authError);
+        }
+        if (code == null || code.isEmpty) {
+          throw const AuthException(
+            'Google sign-in did not return an authorization code.',
+          );
+        }
+
+        await cl.auth.exchangeCodeForSession(code);
+        return true;
+      } on TimeoutException {
+        throw CloudSharingException(
+          'Google sign-in timed out. Please try again.',
+        );
+      } finally {
+        await server.close(force: true);
+      }
+    } on CloudSharingException {
+      rethrow;
     } catch (e) {
       throw CloudSharingException('Google sign-in failed: ${e.toString()}', e);
     }
+  }
+
+  Future<HttpServer> _bindGoogleAuthServer() async {
+    for (final port in _googleAuthLoopbackPorts) {
+      try {
+        return await HttpServer.bind(InternetAddress.loopbackIPv4, port);
+      } on SocketException {
+        continue;
+      }
+    }
+
+    throw CloudSharingException(
+      'Google sign-in could not start because all local callback ports '
+      '(3737–3741) are in use. Close the other app using these ports and try '
+      'again.',
+    );
   }
 
   // --- Campaign Methods ---

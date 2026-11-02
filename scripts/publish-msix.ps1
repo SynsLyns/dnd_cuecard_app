@@ -117,6 +117,7 @@ if (-not $nameMatch.Success -or -not $identityMatch.Success -or -not $versionMat
 $appName = $nameMatch.Groups[1].Value
 $identityName = $identityMatch.Groups[1].Value
 $version = $versionMatch.Groups[1].Value
+$updateVersion = ($version -split '\.')[0..2] -join '.'
 $previousInstallerPath = Join-Path $releaseRoot "$appName.appinstaller"
 if (Test-Path -LiteralPath $previousInstallerPath) {
     [xml]$previousInstaller = Get-Content -LiteralPath $previousInstallerPath -Raw
@@ -224,6 +225,13 @@ $website = [regex]::Replace(
     "a.href = '$installerUrl';"
 )
 Set-Content -LiteralPath $websitePath -Value $website -Encoding UTF8
+$latestJsonPath = Join-Path $releaseRoot 'latest.json'
+$latestJson = @{ version = $updateVersion } | ConvertTo-Json -Compress
+[System.IO.File]::WriteAllText(
+    $latestJsonPath,
+    $latestJson,
+    [System.Text.UTF8Encoding]::new($false)
+)
 
 Copy-Item -LiteralPath $publicCertificatePath -Destination (Join-Path $releaseRoot 'certificate.crt') -Force
 $setupScript = @'

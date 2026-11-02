@@ -22,6 +22,9 @@ Future<void> main() async {
       await Supabase.initialize(
         url: _supabaseUrl,
         publishableKey: _supabaseKey,
+        authOptions: const FlutterAuthClientOptions(
+          authFlowType: AuthFlowType.pkce,
+        ),
       );
     } catch (error) {
       initializationError = 'Could not connect to the sharing service: $error';

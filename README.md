@@ -130,8 +130,10 @@ folder. The branch is separate from `main` and contains only published release
 files. Keep the signing PFX in the ignored `certificates` folder. Do not add
 its password or PFX to the repository.
 
-Before each release, bump `msix_version` in `pubspec.yaml` to a higher
-four-part version. From the source repository, run:
+Before each release, bump `version` and `msix_version` in `pubspec.yaml`
+together. For example, Flutter version `0.0.2+3` corresponds to MSIX version
+`0.0.2.3`; the build/fourth segment is ignored by the in-app version check.
+From the source repository, run:
 
 ```powershell
 .\scripts\publish-msix.ps1 `
@@ -142,27 +144,26 @@ The script prompts for the PFX password, checks that the public `.crt` matches
 the PFX, creates or uses a separate local worktree of `gh-pages`, runs
 `dart run msix:publish`, rewrites both `.appinstaller` package URIs to HTTPS
 Pages URLs, and copies a per-user certificate setup script into the worktree.
-Review the generated files, then run the printed Git commands to commit and
-push the release. The MSIX tool's `publish` command is required to generate the
-`.appinstaller`; `msix:create` alone only creates the package. Installed apps
-check for updates at most once per 24 hours on launch, with background update
-checks enabled and update prompts disabled.
+It also writes `latest.json` with the published major.minor.patch version for
+the in-app update notice. Review the generated files, then run the printed Git
+commands to commit and push the release. The MSIX tool's `publish` command is
+required to generate the `.appinstaller`; `msix:create` alone only creates the
+package. Installed apps check for updates every 8 hours in the background
+without an App Installer prompt.
 
 ### Google OAuth redirect setup
 
-Add the player site's origin to Supabase
-**Authentication → URL Configuration → Redirect URLs**. For the default
-Cloudflare Worker deployment, allow
-`https://dnd-cuecard-app.synslyns.workers.dev/`; add any custom domain or local
-development origin you use as well. Configure the Google OAuth client's
-authorized redirect URI as
-`https://<project-ref>.supabase.co/auth/v1/callback`. For the packaged Windows
-DM app, build/install the MSIX package so the `dndcuecard://login-callback`
-protocol is registered; allow that URI in Supabase's redirect URL list.
-Google OAuth is opened in the system browser, and the callback is forwarded to
-the running desktop app if one is already open. On the web, Supabase returns a
-temporary `code` query parameter which the SDK exchanges for a session; do not
-use that parameter as the campaign join code.
+Allow the desktop loopback redirects
+`http://127.0.0.1:3737` through `http://127.0.0.1:3741` in Supabase
+**Authentication → URL Configuration → Redirect URLs**. Desktop Google
+sign-in uses PKCE and opens the callback on a temporary local HTTP server.
+Configure the Google OAuth client's authorized redirect URI as
+`https://<project-ref>.supabase.co/auth/v1/callback`. The player web app
+continues to use its own web-origin redirect; for the default Cloudflare Worker
+deployment, allow `https://dnd-cuecard-app.synslyns.workers.dev/` and add any
+custom domain or local development origin you use. On the web, Supabase
+returns a temporary `code` query parameter which the SDK exchanges for a
+session; do not use that parameter as the campaign join code.
 
 ## Tests and RLS verification
 
