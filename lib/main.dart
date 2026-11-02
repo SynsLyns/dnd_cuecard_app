@@ -16,6 +16,7 @@ import 'logic/supabase_service.dart';
 import 'logic/update_checker.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
+import 'widgets/app_version_overlay.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -82,6 +83,8 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'DnD Cue Cards',
         theme: AppTheme.light,
+        builder: (context, child) =>
+            AppVersionOverlay(child: child ?? const SizedBox.shrink()),
         home: MyHomePage(),
       ),
     );
