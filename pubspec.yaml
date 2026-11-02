@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.0.3
+version: 0.0.4
 
 environment:
   sdk: ^3.8.0
@@ -122,13 +122,13 @@ msix_config:
   display_name: DnD Cue Card App
   publisher_display_name: Get Balled
   identity_name: ballers.suite.dndcuecardapp
-  msix_version: 0.0.3.0
+  msix_version: 0.0.4.0
   logo_path: windows\runner\resources\huh.png
   capabilities: nothing
   certificate_path: certificates\CERTIFICATE.pfx
   install_certificate: false
   app_installer:
-    hours_between_update_checks: 8
+    hours_between_update_checks: 0
     automatic_background_task: true
     update_blocks_activation: false
     show_prompt: false
